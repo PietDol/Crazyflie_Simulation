@@ -1,5 +1,5 @@
 # Adapted from DLR-RM/stable-baselines3
-PACKAGE_NAME=eagerx_template
+PACKAGE_NAME=Crazyflie_Simulation
 
 SHELL=/bin/bash
 LINT_PATHS=${PACKAGE_NAME}/

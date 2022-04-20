@@ -1,11 +1,11 @@
 [tool.poetry]
-name = "eagerx_template"
-version = "0.1.1"
+name = "Crazyflie_simulation"
+version = "0.1.8"
 license = "Apache2.0"
 description = "Template for creating EAGERx packages."
 authors = ["Jelle Luijkx <j.d.luijkx@tudelft.nl>", "Bas van der Heijden <d.s.vanderheijden@tudelft.nl>"]
-homepage = "https://github.com/eager-dev/eagerx_template"
-repository = "https://github.com/eager-dev/eagerx_template"
+homepage = "https://github.com/PietDol/BEP-CrazieFlie-Simulator"
+repository = "https://github.com/PietDol/BEP-CrazieFlie-Simulator"
 documentation = "https://eagerx.readthedocs.io/en/master/"
 
 [tool.poetry.dependencies]
@@ -13,7 +13,7 @@ python = "^3.6.2"
 eagerx = "^0.1.13"
 
 [tool.poetry.dev-dependencies]
-black = "^22.1.0"
+black = "^22.3.0"
 pytest = "^7.0"
 pytest-cov = "^3.0.0"
 flake8 = ">=3"
@@ -22,3 +22,13 @@ flake8-bugbear = "^22.3.23"
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.semantic_release]
+version_variable = [
+    "Crazyflie_simulation/__init__.py:__version__",
+    "pyproject.toml:version"
+]
+branch = "master"
+upload_to_pypi = true
+upload_to_release = true
+build_command = "pip install poetry && poetry build"
