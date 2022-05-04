@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="cylinder">
+
+	<link name="can">
+		<contact>
+			<lateral_friction value="0.3"/>
+      		<rolling_friction value="0.0"/>
+      		<contact_cfm value="0.0"/>
+      		<contact_erp value="0.2"/>
+    	</contact>
+
+		<inertial>
+			<mass value="0.358"/>
+			<!-- cylindrical shell : Izz=m*r^2; Ixx=Iyy=1/12*m*(6*r^2+h^2) -->
+			<!-- solid cylinder : Izz=(m*r^2)/2; Ixx=Iyy=1/12*m*(3*r^2+h^2) -->
+			<inertia  ixx="0.0004009" ixy="0.00"  ixz="0.00" iyy="0.0004009" iyz="0.00" izz="0.00016335" />
+		</inertial>
+		<visual>
+			<origin xyz="0 0 0" rpy="0 0 0"/>
+			<geometry>
+				<cylinder length="0.113" radius="0.033"/>
+			</geometry>
+			<material name="red">
+        		<color rgba="1 0.388 0.278 1"/>
+      		</material>
+		</visual>
+		<collision>
+			<origin xyz="0 0 0" rpy="0 0 0"/>
+			<geometry>
+				<cylinder length="0.113" radius="0.033"/>
+			</geometry>
+		</collision>
+	</link>
+</robot>

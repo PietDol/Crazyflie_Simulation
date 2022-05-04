@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="cylinder">
+
+	<link name="can">
+		<visual>
+			<origin xyz="0 0 0" rpy="0 0 0"/>
+			<geometry>
+				<cylinder length="0.113" radius="0.033"/>
+			</geometry>
+			<material name="red">
+        		<color rgba="1 0.388 0.278 0.35"/>
+      		</material>
+		</visual>
+	</link>
+</robot>

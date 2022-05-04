@@ -1,0 +1,36 @@
+<?xml version="1.0" ?>
+<robot name="box">
+
+  <link name="baseLink">
+    <contact>
+      <lateral_friction value="0.3"/>
+      <rolling_friction value="0.0"/>
+      <contact_cfm value="0.0"/>
+      <contact_erp value="1.0"/>
+    </contact>
+
+    <inertial>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+       <mass value="0.358"/>
+		<!-- solid box : Izz=m*(x*x+y*y)/12; Ixx=m*(y*y+z*z)/12 Iyy=m*(x*x+z*z)/12 -->
+       <inertia ixx="0.000292" ixy = "0" ixz = "0"
+                iyy="0.000292" iyz = "0"
+                izz="0.000292" />
+    </inertial>
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+		  <box size="0.07 0.07 0.07"/>
+      </geometry>
+       <material name="red">
+        <color rgba="1 0.388 0.278 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+	 	<box size="0.07 0.07 0.07"/>
+      </geometry>
+    </collision>
+  </link>
+</robot>

@@ -1,0 +1,15 @@
+<?xml version="1.0" ?>
+<robot name="box">
+
+  <link name="baseLink">
+    <visual>
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <geometry>
+		  <box size="0.07 0.07 0.07"/>
+      </geometry>
+       <material name="red">
+        <color rgba="1 0.388 0.278 0.35"/>
+      </material>
+    </visual>
+  </link>
+</robot>
