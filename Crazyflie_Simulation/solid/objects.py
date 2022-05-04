@@ -102,8 +102,8 @@ class Solid(Object):
         spec.actuators.external_force.space_converter = SpaceConverter.make(
             "Space_Float32MultiArray",
             dtype="float32",
-            low=[5, 0, 0],
-            high=[5, 0, 0],
+            low=[0.5, 0, 0],
+            high=[0.5, 0, 0],
         )
 
     @staticmethod

@@ -18,12 +18,12 @@
                 izz="0.000292" />
     </inertial>
     <visual>
-      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <origin rpy="0 0 55" xyz="0 0 0"/>
       <geometry>
-		  <box size="0.07 0.07 0.07"/>
+        <mesh filename="./cf2.dae" scale=" 1 1 1"/>
       </geometry>
-       <material name="red">
-        <color rgba="1 0.388 0.278 1"/>
+      <material name="grey">
+        <color rgba=".5 .5 .5 1"/>
       </material>
     </visual>
     <collision>

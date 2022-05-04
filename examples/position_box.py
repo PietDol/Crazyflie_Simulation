@@ -4,7 +4,7 @@ from eagerx.core.env import EagerxEnv
 from eagerx.core.graph import Graph
 import eagerx.nodes  # Registers butterworth_filter # noqa # pylint: disable=unused-import
 import eagerx_pybullet  # Registers PybulletBridge # noqa # pylint: disable=unused-import
-import Crazyflie_Simulation # Registers objects # noqa # pylint: disable=unused-import
+import Crazyflie_Simulation  # Registers objects # noqa # pylint: disable=unused-import
 import eagerx_reality  # Registers bridge # noqa # pylint: disable=unused-import
 
 # Other
@@ -14,7 +14,8 @@ from datetime import datetime
 import os
 
 NAME = "varyGoal_term_noExcl"
-LOG_DIR = os.path.dirname(Crazyflie_Simulation.__file__) + f"/../logs/{NAME}_{datetime.today().strftime('%Y-%m-%d-%H%M')}"
+LOG_DIR = os.path.dirname(
+    Crazyflie_Simulation.__file__) + f"/../logs/{NAME}_{datetime.today().strftime('%Y-%m-%d-%H%M')}"
 
 # todo: increase friction coefficient (seems to glide too much)
 # todo: velocity control
@@ -49,7 +50,8 @@ if __name__ == "__main__":
     # Create solid object
     urdf_path = os.path.dirname(Crazyflie_Simulation.__file__) + "/solid/assets/"
     solid = eagerx.Object.make(
-        "Solid", "solid", urdf=urdf_path + "box.urdf", rate=rate, sensors=["pos"], actuators=["external_force"], base_pos=[0, 0, 1], fixed_base=False,
+        "Solid", "solid", urdf=urdf_path + "cf2x.urdf", rate=rate, sensors=["pos"], actuators=["external_force"],
+        base_pos=[0, 0, 1], fixed_base=False,
         states=["pos", "vel", "orientation", "angular_vel", "lateral_friction"]
     )
     solid.sensors.pos.space_converter.low = [0, -1, 0]
@@ -138,7 +140,8 @@ if __name__ == "__main__":
     # Define bridges
     # bridge = Bridge.make("RealBridge", rate=rate, sync=True, process=process.NEW_PROCESS)
     bridge = eagerx.Bridge.make("PybulletBridge", rate=safe_rate, gui=True, egl=True, sync=True, real_time_factor=0.0,
-                                process=eagerx.process.ENVIRONMENT)
+                                process=eagerx.process.ENVIRONMENT)  # delete process to run faster, this is useful for debugger
+
 
     # Define step function
     def step_fn(prev_obs, obs, action, steps):
@@ -167,6 +170,7 @@ if __name__ == "__main__":
                 rwd = -50
         # done = done | (np.linalg.norm(goal - can) < 0.1 and can[2] < 0.05)  # Can has not fallen down & within threshold.
         return obs, rwd, done, info
+
 
     # Define reset function
     def reset_fn(env):
@@ -198,6 +202,7 @@ if __name__ == "__main__":
         # Set gripper to closed position
         # states["viper/gripper"][0] = 0
         return states
+
 
     # Initialize Environment
     env = EagerxEnv(name="rx", rate=rate, graph=graph, bridge=bridge, step_fn=step_fn, reset_fn=reset_fn, exclude=[])
