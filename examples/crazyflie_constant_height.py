@@ -56,13 +56,8 @@ if __name__ == "__main__":
 
     # Create reset node
     if real_reset:
-        # Disconnect simulation-specific connections
-
         # Connect target state we are resetting
         graph.connect(action="external_force", target=solid.actuators)
-        # Connect joint output to safety filter
-
-        # Connect inputs to determine reset status
 
     # Show in the gui
     # graph.gui()

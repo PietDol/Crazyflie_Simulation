@@ -30,7 +30,7 @@ if __name__ == "__main__":
     real_reset = False
     rate = 20
     safe_rate = 20
-    max_steps = 300
+    max_steps = 3000
 
     # Initialize empty graph
     graph = Graph.create()
@@ -51,13 +51,13 @@ if __name__ == "__main__":
     urdf_path = os.path.dirname(Crazyflie_Simulation.__file__) + "/solid/assets/"
     solid = eagerx.Object.make(
         "Solid", "solid", urdf=urdf_path + "cf2x.urdf", rate=rate, sensors=["pos"], actuators=["external_force"],
-        base_pos=[0, 0, 1], fixed_base=False,
+        base_pos=[0, 0, 0], fixed_base=False,
         states=["pos", "vel", "orientation", "angular_vel", "lateral_friction"]
     )
-    solid.sensors.pos.space_converter.low = [0, -1, 0]
-    solid.sensors.pos.space_converter.high = [1, 1, 0.15]
+    solid.sensors.pos.space_converter.low = [-2, -2, 0]
+    solid.sensors.pos.space_converter.high = [3, 3, 0.15]
     solid.states.lateral_friction.space_converter.low = 0.4
-    solid.states.lateral_friction.space_converter.high = 0.1
+    solid.states.lateral_friction.space_converter.high = 0.4
     graph.add(solid)
 
     # Create solid goal
@@ -145,30 +145,15 @@ if __name__ == "__main__":
 
     # Define step function
     def step_fn(prev_obs, obs, action, steps):
-        # Set info:
         info = dict()
-        # Calculate reward
-        # ee_pos = obs["ee_position"][0]
-        # goal = obs["goal"][0]
         can = obs["solid"][0]
-        # vel = obs["velocity"][0]
-        # Penalize distance of the end-effector to the object
-        # rwd_near = 0.4 * -abs(np.linalg.norm(ee_pos - can) - 0.033)
-        # Penalize distance of the objec to the goal
-        # rwd_dist = 3.0 * -np.linalg.norm(goal - can)
-        # Penalize actions (indirectly, by punishing the angular velocity.
-        # rwd_ctrl = 0.1 * -np.square(vel).sum()
-        # rwd = rwd_dist + rwd_ctrl + rwd_near
-        rwd = 0
         # Determine done flag
         if steps > max_steps:  # Max steps reached
             done = True
-            info["TimeLimit.truncated"] = True
         else:
-            done = False | (np.linalg.norm(can[:2]) > 1.0)  # Can is out of reach
-            if done:
-                rwd = -50
-        # done = done | (np.linalg.norm(goal - can) < 0.1 and can[2] < 0.05)  # Can has not fallen down & within threshold.
+            # Episode is terminated if the solid is further than 3m from the orgin
+            done = False | (np.linalg.norm(can[:2]) > 3.0)
+        rwd = 0
         return obs, rwd, done, info
 
 
@@ -176,31 +161,11 @@ if __name__ == "__main__":
     def reset_fn(env):
         states = env.state_space.sample()
 
-        # Set orientation
-        # states["goal/orientation"] = np.array([0, 0, 0, 1])
-        # states["solid/orientation"] = states["goal/orientation"]
         states["solid/orientation"] = np.array([0, 0, 0, 1])
-
-        # Sample new starting state (at least 17 cm from goal)
-        # z = 0.035
-        # radius = 0.21
-        # goal_pos = np.array([0.35, 0, z])
-        # while True:
-        #     can_pos = np.concatenate(
-        #         [
-        #             np.random.uniform(low=0, high=0.4 * radius, size=1),
-        #             np.random.uniform(low=-1.2 * radius, high=1.2 * radius, size=1),
-        #             [z],
-        #         ]
-        #     )
-        #     if np.linalg.norm(can_pos) > radius:
-        #         break
-        # states["solid/pos"] = can_pos + goal_pos
         states["solid/pos"] = np.array([0, 0, 0])
-        # states["goal/pos"] = goal_pos
+        states["solid/vel"] = np.array([0, 0, 0])
+        states["solid/angular_vel"] = np.array([0, 0, 0])
 
-        # Set gripper to closed position
-        # states["viper/gripper"][0] = 0
         return states
 
 
@@ -228,4 +193,3 @@ if __name__ == "__main__":
         while not done:
             action = env.action_space.sample()
             obs, reward, done, info = env.step(action)
-            rgb = env.render("rgb_array")
