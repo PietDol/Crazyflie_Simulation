@@ -42,7 +42,7 @@ segmentLength = 0.2             # -     The length of the lines, representing th
 horAxisRange = [0, 8]           # m     The horizontal axis range
 vertAxisRange = [0.7, 1.3]      # m     The vertical axis range
 ratePlot = 5                    # Hz    The rate of lines drawn in the plot
-rateAnimation = 100             # Hz    The rate of the animation saved as a GIF
+rateAnimation = 10             # Hz    The rate of the animation saved as a GIF
 
 plt.figure(1)
 timeStamps = []
