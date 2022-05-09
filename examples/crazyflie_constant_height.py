@@ -6,6 +6,7 @@ import eagerx.nodes  # Registers butterworth_filter # noqa # pylint: disable=unu
 import eagerx_pybullet  # Registers PybulletBridge # noqa # pylint: disable=unused-import
 import Crazyflie_Simulation  # Registers objects # noqa # pylint: disable=unused-import
 import eagerx_reality  # Registers bridge # noqa # pylint: disable=unused-import
+import Crazyflie_Simulation.solid.nodes
 
 # Other
 import numpy as np
@@ -17,11 +18,7 @@ NAME = "varyGoal_term_noExcl"
 LOG_DIR = os.path.dirname(
     Crazyflie_Simulation.__file__) + f"/../logs/{NAME}_{datetime.today().strftime('%Y-%m-%d-%H%M')}"
 
-# todo: increase friction coefficient (seems to glide too much)
-# todo: velocity control
-# todo: Increase the penalty on velocity
-# todo: switch goal with object position
-# todo: normalize actions/observations
+# todo: check the windows and rates
 
 if __name__ == "__main__":
     eagerx.initialize("eagerx_core", anonymous=True, log_level=eagerx.log.WARN)
@@ -38,7 +35,7 @@ if __name__ == "__main__":
     # Create solid object
     urdf_path = os.path.dirname(Crazyflie_Simulation.__file__) + "/solid/assets/"
     solid = eagerx.Object.make(
-        "Solid", "solid", urdf=urdf_path + "cf2x.urdf", rate=rate, sensors=["pos"], actuators=["external_force"],
+        "Solid", "crazyflie", urdf=urdf_path + "cf2x.urdf", rate=rate, sensors=["pos", "vel", "orientation", "angular_vel"], actuators=["external_force"],
         base_pos=[0, 0, 1], fixed_base=False,
         states=["pos", "vel", "orientation", "angular_vel", "lateral_friction"]
     )
@@ -48,11 +45,43 @@ if __name__ == "__main__":
     solid.states.lateral_friction.space_converter.high = 0.1
     graph.add(solid)
 
+    # Add attitude PID node to graph
+    attitude_pid = eagerx.Node.make(
+        "AttitudePID", "attitude_pid", rate=rate, n=3
+    )
+    graph.add(attitude_pid)
+
+    # Add attitude rate PID node to graph
+    attitude_rate_pid = eagerx.Node.make(
+        "AttitudeRatePID", "attitude_rate_pid", rate=rate, n=3
+    )
+    graph.add(attitude_rate_pid)
+
+    # Add power distribution
+    power_distribution = eagerx.Node.make(
+        "PowerDistribution", "power_distribution", rate=rate, n=3
+    )
+    graph.add(power_distribution)
+
+    # Add state estimator
+    state_estimator = eagerx.Node.make(
+        "StateEstimator", "state_estimator", rate=rate, n=3
+    )
+    graph.add(state_estimator)
+
     # Connecting observations
-    graph.connect(source=solid.sensors.pos, observation="solid")
+    graph.connect(source=solid.sensors.orientation, observation="crazyflie")
 
     # Connecting actions
-    graph.connect(action="external_force", target=solid.actuators.external_force)
+    # graph.connect(action="external_force", target=solid.actuators.external_force)
+    graph.connect(action="desired_attitude", target=attitude_pid.inputs.desired_attitude)
+    graph.connect(action="desired_thrust", target=power_distribution.inputs.desired_thrust)
+    graph.connect(source=attitude_pid.outputs.new_attitude_rate, target=attitude_rate_pid.inputs.current_rate)
+    graph.connect(source=attitude_rate_pid.outputs.new_motor_control, target=power_distribution.inputs.calculated_control)
+    graph.connect(source=power_distribution.outputs.pwm_signal, target=solid.actuators.external_force)
+    graph.connect(source=solid.sensors.angular_vel, target=state_estimator.inputs.angular_velocity)
+    graph.connect(source=solid.sensors.vel, target=state_estimator.inputs.acceleration)
+    graph.connect(source=state_estimator.outputs.orientation, target=attitude_pid.inputs.current_attitude)
 
     # Create reset node
     if real_reset:
@@ -65,7 +94,7 @@ if __name__ == "__main__":
         # Connect inputs to determine reset status
 
     # Show in the gui
-    # graph.gui()
+    graph.gui()
 
     # Define bridges
     # bridge = Bridge.make("RealBridge", rate=rate, sync=True, process=process.NEW_PROCESS)
@@ -77,7 +106,7 @@ if __name__ == "__main__":
         # Set info:
         info = dict()
         # Calculate reward
-        can = obs["solid"][0]
+        can = obs["crazyflie"][0]
         # Penalize distance of the end-effector to the object
         rwd = 0
         # Determine done flag
@@ -97,9 +126,9 @@ if __name__ == "__main__":
         states = env.state_space.sample()
 
         # Set orientation
-        states["solid/orientation"] = np.array([0, 0, 0, 1])
+        states["crazyflie/orientation"] = np.array([0, 0, 0, 1])
 
-        states["solid/pos"] = np.array([0, 0, 0])
+        states["crazyflie/pos"] = np.array([0, 0, 0])
         return states
 
 
