@@ -139,7 +139,7 @@ class PowerDistribution(eagerx.Node):
     @eagerx.register.inputs(desired_thrust=Float32MultiArray, calculated_control=Float32MultiArray)
     @eagerx.register.outputs(pwm_signal=Float32MultiArray)
     def callback(self, t_n: float, desired_thrust: Msg, calculated_control: Msg):
-        test = np.array([0, 0, 0])
+        test = np.array([0.2, 0, 0])
         return dict(pwm_signal=Float32MultiArray(data=test))
 
 
