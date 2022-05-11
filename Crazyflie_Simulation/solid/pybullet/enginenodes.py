@@ -24,7 +24,7 @@ class ForceController(EngineNode):
         links: List[str] = None,
         process: Optional[int] = p.BRIDGE,
         color: Optional[str] = "pink",
-        mode: str = "external_force",
+        mode: str = "external_force", # = mode?
         force_target: List[float] = None,
     ):
         # Performs all the steps to fill-in the params with registered info about all functions.
@@ -84,6 +84,8 @@ class ForceController(EngineNode):
     def _force_control(p, mode, objectUniqueId, linkIndex, posObj):
         if mode == "external_force":
             def cb(action):
+                #todo: HIER NOG PWM NAAR FORCE OMREKENEN
+                action = action[:3]
                 return p.applyExternalForce(
                     objectUniqueId=objectUniqueId,
                     linkIndex=linkIndex[0],

@@ -35,7 +35,7 @@ if __name__ == "__main__":
     # Create solid object
     urdf_path = os.path.dirname(Crazyflie_Simulation.__file__) + "/solid/assets/"
     crazyflie = eagerx.Object.make(
-        "Crazyflie", "crazyflie", urdf=urdf_path + "cf2x.urdf", rate=rate, sensors=["orientation", "gyroscope", "accelerometer"], actuators=["external_force"],
+        "Crazyflie", "crazyflie", urdf=urdf_path + "cf2x.urdf", rate=rate, sensors=["orientation", "gyroscope", "accelerometer"], actuators=["pwm_input"],
         base_pos=[0, 0, 1], fixed_base=False,
         states=["pos", "vel", "orientation", "angular_vel"]
     )
@@ -78,7 +78,7 @@ if __name__ == "__main__":
     graph.connect(action="desired_thrust", target=power_distribution.inputs.desired_thrust)
     graph.connect(source=attitude_pid.outputs.new_attitude_rate, target=attitude_rate_pid.inputs.desired_rate)
     graph.connect(source=attitude_rate_pid.outputs.new_motor_control, target=power_distribution.inputs.calculated_control)
-    graph.connect(source=power_distribution.outputs.pwm_signal, target=crazyflie.actuators.external_force)
+    graph.connect(source=power_distribution.outputs.pwm_signal, target=crazyflie.actuators.pwm_input)
     graph.connect(source=crazyflie.sensors.gyroscope, target=state_estimator.inputs.angular_velocity)
     graph.connect(source=crazyflie.sensors.gyroscope, target=attitude_rate_pid.inputs.current_rate)
     graph.connect(source=crazyflie.sensors.accelerometer, target=state_estimator.inputs.acceleration)
@@ -87,7 +87,7 @@ if __name__ == "__main__":
     # Create reset node
     if real_reset:
         # Connect target state we are resetting
-        graph.connect(action="external_force", target=crazyflie.actuators)
+        graph.connect(action="pwm_input", target=crazyflie.actuators)
         # Connect joint output to safety filter
 
     # Show in the gui
