@@ -84,7 +84,8 @@ class ForceController(EngineNode):
     def _force_control(p, mode, objectUniqueId, linkIndex, posObj):
         if mode == "external_force":
             def cb(action):
-
+                #todo: HIER NOG PWM NAAR FORCE OMREKENEN
+                action = action[:3]
                 return p.applyExternalForce(
                     objectUniqueId=objectUniqueId,
                     linkIndex=linkIndex[0],

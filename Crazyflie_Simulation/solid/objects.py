@@ -202,12 +202,12 @@ class Crazyflie(Object):
         graph.connect(source=accelerometer.outputs.obs, sensor="accelerometer")
         graph.connect(actuator="pwm_input", target=external_force.inputs.action)
 
-        graph.gui()
+        # graph.gui()
 
         # Check graph validity (commented out)
         # graph.is_valid(plot=True)
 
-        graph.gui()
+        # graph.gui()
 class Solid(Object):
     entity_id = "Solid"
 

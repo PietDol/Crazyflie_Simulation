@@ -90,9 +90,9 @@ class AttitudeRatePID(eagerx.Node):
     @eagerx.register.inputs(desired_rate=Float32MultiArray, current_rate=Float32MultiArray)
     @eagerx.register.outputs(new_motor_control=Float32MultiArray)
     def callback(self, t_n: float, desired_rate: Msg, current_rate: Msg):
-        test = np.array([20000, 0, 0])
+        test = np.array([10000, 5000, 2500])
         return dict(new_motor_control=Float32MultiArray(data=test))
-
+        # pass
 
 class PowerDistribution(eagerx.Node):
     @staticmethod
@@ -143,7 +143,7 @@ class PowerDistribution(eagerx.Node):
     @eagerx.register.inputs(desired_thrust=Float32MultiArray, calculated_control=Float32MultiArray)
     @eagerx.register.outputs(pwm_signal=Float32MultiArray)
     def callback(self, t_n: float, desired_thrust: Msg, calculated_control: Msg):
-        desired_thrust.msgs[-1].data = [1000000] #set input at 30000, moet nog vanuit env/actions komen
+        desired_thrust.msgs[-1].data = [10000] #set input at 30000, moet nog vanuit env/actions komen
 
         #define variables from inputs
         calculated_control_input = calculated_control.msgs[-1].data #roll pitch yaw
@@ -161,8 +161,8 @@ class PowerDistribution(eagerx.Node):
 
         #todo: add idleThrust minimum
 
-        # new_pwm_signal = np.array([motorPower_m1, motorPower_m2, motorPower_m3, motorPower_m4]) #enginenode verwacht force
-        new_pwm_signal = np.array([3,3,0])
+        new_pwm_signal = np.array([motorPower_m1, motorPower_m2, motorPower_m3, motorPower_m4]) #enginenode verwacht force
+        # new_pwm_signal = np.array([3,3,0])
         return dict(pwm_signal=Float32MultiArray(data=new_pwm_signal))
 
 
