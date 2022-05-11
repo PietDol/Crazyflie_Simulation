@@ -145,7 +145,6 @@ class PowerDistribution(eagerx.Node):
     def callback(self, t_n: float, desired_thrust: Msg, calculated_control: Msg):
         desired_thrust.msgs[-1].data = [1000000] #set input at 30000, moet nog vanuit env/actions komen
 
-        #todo: fix RPY down here, because they act sketchy sometimes
         #define variables from inputs
         calculated_control_input = calculated_control.msgs[-1].data #roll pitch yaw
         roll = calculated_control.msgs[-1].data[0]
@@ -163,8 +162,7 @@ class PowerDistribution(eagerx.Node):
         #todo: add idleThrust minimum
 
         # new_pwm_signal = np.array([motorPower_m1, motorPower_m2, motorPower_m3, motorPower_m4]) #enginenode verwacht force
-        new_pwm_signal = np.array([3, 3, 0])
-        print(f'pwm is; {new_pwm_signal}')
+        new_pwm_signal = np.array([3,3,0])
         return dict(pwm_signal=Float32MultiArray(data=new_pwm_signal))
 
 
