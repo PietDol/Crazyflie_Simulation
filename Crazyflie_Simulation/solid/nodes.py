@@ -8,6 +8,7 @@ from Crazyflie_Simulation.solid.pid import PID
 
 # todo: implement functions for the nodes
 # todo: check boundaries for all classes
+# todo: integration limit pids
 
 
 class AttitudePID(eagerx.Node):
