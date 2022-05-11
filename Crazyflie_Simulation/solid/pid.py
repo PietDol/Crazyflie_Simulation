@@ -25,7 +25,6 @@ class PID:
         # Calculate action
         for idx, e in enumerate(self.window):
             self.u += self.F[idx] * e
-            print(idx, e)
 
         print(self.u)
 

@@ -14,7 +14,8 @@ class Solid(Object):
 
     @staticmethod
     @register.sensors(
-        pos=Float32MultiArray, vel=Float32MultiArray, orientation=Float32MultiArray, angular_vel=Float32MultiArray
+        pos=Float32MultiArray, vel=Float32MultiArray, orientation=Float32MultiArray, gyroscope=Float32MultiArray,
+        accelerometer=Float32MultiArray
     )
     @register.engine_states(
         pos=Float32MultiArray,
@@ -75,9 +76,9 @@ class Solid(Object):
             high=[0, 0, 1, 1],
         )
 
-        # Angular velocity
-        spec.sensors.angular_vel.rate = rate
-        spec.sensors.angular_vel.space_converter = SpaceConverter.make(
+        # Gyroscope
+        spec.sensors.gyroscope.rate = rate
+        spec.sensors.gyroscope.space_converter = SpaceConverter.make(
             "Space_Float32MultiArray",
             dtype="float32",
             low=[-10, -10, -10],
@@ -88,6 +89,15 @@ class Solid(Object):
             dtype="float32",
             low=[0, 0, 0],
             high=[0, 0, 0],
+        )
+
+        # Accelerometer
+        spec.sensors.accelerometer.rate = rate
+        spec.sensors.accelerometer.space_converter = SpaceConverter.make(
+            "Space_Float32MultiArray",
+            dtype="float32",
+            low=[-10, -10, -10],
+            high=[10, 10, 10],
         )
 
         # Dynamics
@@ -109,17 +119,17 @@ class Solid(Object):
     @staticmethod
     @register.spec(entity_id, Object)
     def spec(
-        spec: ObjectSpec,
-        name: str,
-        urdf: str,
-        sensors=None,
-        states=None,
-        actuators=None,
-        rate=30,
-        base_pos=None,
-        base_or=None,
-        self_collision=True,
-        fixed_base=True,
+            spec: ObjectSpec,
+            name: str,
+            urdf: str,
+            sensors=None,
+            states=None,
+            actuators=None,
+            rate=30,
+            base_pos=None,
+            base_or=None,
+            self_collision=True,
+            fixed_base=True,
     ):
         """Object spec of Solid"""
         # Performs all the steps to fill-in the params with registered info about all functions.
@@ -128,9 +138,9 @@ class Solid(Object):
         # Modify default agnostic params
         # Only allow changes to the agnostic params (rates, windows, (space)converters, etc...
         spec.config.name = name
-        spec.config.sensors = sensors if sensors is not None else ["pos", "vel", "orientation", "angular_vel"]
+        spec.config.sensors = sensors if sensors is not None else ["pos", "vel", "orientation", "gyroscope", "accelerometer"]
         spec.config.states = states if states is not None else ["pos", "vel", "orientation", "angular_vel"]
-        spec.config.actuators = actuators if actuators is not None else []  #["external_force"]
+        spec.config.actuators = actuators if actuators is not None else []  # ["external_force"]
 
         # Add registered agnostic params
         spec.config.urdf = urdf
@@ -171,21 +181,26 @@ class Solid(Object):
         orientation = EngineNode.make(
             "LinkSensor", "orientation", rate=spec.sensors.orientation.rate, process=2, mode="orientation"
         )
-        angular_vel = EngineNode.make(
-            "LinkSensor", "angular_vel", rate=spec.sensors.angular_vel.rate, process=2, mode="angular_vel"
+        gyroscope = EngineNode.make(
+            "LinkSensor", "gyroscope", rate=spec.sensors.gyroscope.rate, process=2, mode="gyroscope"
+        )
+        accelerometer = EngineNode.make(
+            "LinkSensor", "accelerometer", rate=spec.sensors.accelerometer.rate, process=2, mode="accelerometer"
         )
 
         # Create actuator engine nodes
         # Rate=None, but we will connect it to an actuator (thus will use the rate set in the agnostic specification)
         external_force = EngineNode.make(
-            "ForceController", "external_force", rate=spec.actuators.external_force.rate, process=2, mode="external_force"
+            "ForceController", "external_force", rate=spec.actuators.external_force.rate, process=2,
+            mode="external_force"
         )
         # Connect all engine nodes
-        graph.add([pos, vel, orientation, angular_vel, external_force])
+        graph.add([pos, vel, orientation, gyroscope, accelerometer, external_force])
         graph.connect(source=pos.outputs.obs, sensor="pos")
         graph.connect(source=vel.outputs.obs, sensor="vel")
         graph.connect(source=orientation.outputs.obs, sensor="orientation")
-        graph.connect(source=angular_vel.outputs.obs, sensor="angular_vel")
+        graph.connect(source=gyroscope.outputs.obs, sensor="angular_vel")
+        graph.connect(source=accelerometer.output.obs, sensor="acceleration")
         graph.connect(actuator="external_force", target=external_force.inputs.action)
 
         # Check graph validity (commented out)
@@ -292,17 +307,17 @@ class Solid1(Object):
     @staticmethod
     @register.spec(entity_id, Object)
     def spec(
-        spec: ObjectSpec,
-        name: str,
-        urdf: str,
-        sensors=None,
-        states=None,
-        # actuators=None,
-        rate=30,
-        base_pos=None,
-        base_or=None,
-        self_collision=True,
-        fixed_base=True,
+            spec: ObjectSpec,
+            name: str,
+            urdf: str,
+            sensors=None,
+            states=None,
+            # actuators=None,
+            rate=30,
+            base_pos=None,
+            base_or=None,
+            self_collision=True,
+            fixed_base=True,
     ):
         """Object spec of Solid"""
         # Performs all the steps to fill-in the params with registered info about all functions.
