@@ -24,7 +24,7 @@ class Crazyflie(Object):
         angular_vel=Float32MultiArray,
         lateral_friction=Float32,
     )
-    @register.actuators(external_force=Float32MultiArray)
+    @register.actuators(pwm_input=Float32MultiArray)
     @register.config(urdf=None, fixed_base=True, self_collision=True, base_pos=[0, 0, 0], base_or=[0, 0, 0, 1])
     def agnostic(spec: ObjectSpec, rate):
         """Agnostic definition of the Solid"""
@@ -109,7 +109,7 @@ class Crazyflie(Object):
         )
 
         # Actuators
-        spec.actuators.external_force.space_converter = SpaceConverter.make(
+        spec.actuators.pwm_input.space_converter = SpaceConverter.make(
             "Space_Float32MultiArray",
             dtype="float32",
             low=[0.2, 0.2, 0],
@@ -191,7 +191,7 @@ class Crazyflie(Object):
         # Create actuator engine nodes
         # Rate=None, but we will connect it to an actuator (thus will use the rate set in the agnostic specification)
         external_force = EngineNode.make(
-            "ForceController", "external_force", rate=spec.actuators.external_force.rate, process=2,
+            "ForceController", "external_force", rate=spec.actuators.pwm_input.rate, process=2,
             mode="external_force"
         )
         # Connect all engine nodes
@@ -201,12 +201,12 @@ class Crazyflie(Object):
         graph.connect(source=orientation.outputs.obs, sensor="orientation")
         graph.connect(source=gyroscope.outputs.obs, sensor="gyroscope")
         graph.connect(source=accelerometer.outputs.obs, sensor="accelerometer")
-        graph.connect(actuator="external_force", target=external_force.inputs.action)
+        graph.connect(actuator="pwm_input", target=external_force.inputs.action)
 
         # Check graph validity (commented out)
         # graph.is_valid(plot=True)
 
-
+        graph.gui()
 class Solid(Object):
     entity_id = "Solid"
 
@@ -389,3 +389,4 @@ class Solid(Object):
 
         # Check graph validity (commented out)
         # graph.is_valid(plot=True)
+
