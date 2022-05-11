@@ -90,9 +90,7 @@ class AttitudeRatePID(eagerx.Node):
     @eagerx.register.inputs(desired_rate=Float32MultiArray, current_rate=Float32MultiArray)
     @eagerx.register.outputs(new_motor_control=Float32MultiArray)
     def callback(self, t_n: float, desired_rate: Msg, current_rate: Msg):
-        # test = np.array([35000, 0, 0])
-        test = (current_rate.msgs[-1].data)
-        print(test)
+        test = np.array([20000, 0, 0])
         return dict(new_motor_control=Float32MultiArray(data=test))
 
 
@@ -134,13 +132,38 @@ class PowerDistribution(eagerx.Node):
     def reset(self):
         pass
 
+    #limit motorpowers definition
+    def limitThrust(self, value):
+        if (value > 65535):
+            value = 65535
+        elif (value < 0):
+            value = 0
+        return value
+
     @eagerx.register.inputs(desired_thrust=Float32MultiArray, calculated_control=Float32MultiArray)
     @eagerx.register.outputs(pwm_signal=Float32MultiArray)
     def callback(self, t_n: float, desired_thrust: Msg, calculated_control: Msg):
-        desired_thrust.msgs[-1].data = [30000] #set input at 30000
-        print(calculated_control.msgs[-1].data[0])
-        test = np.array([0.5, 0, 0])
-        return dict(pwm_signal=Float32MultiArray(data=test))
+        desired_thrust.msgs[-1].data = [1000000] #set input at 30000, moet nog vanuit env/actions komen
+
+        #define variables from inputs
+        calculated_control_input = calculated_control.msgs[-1].data #roll pitch yaw
+        roll = calculated_control.msgs[-1].data[0]
+        pitch = calculated_control.msgs[-1].data[1]
+        yaw = calculated_control.msgs[-1].data[2]
+        desired_thrust_input = desired_thrust.msgs[-1].data[0]
+        # print(f"======\n calculated control = {calculated_control_input} \n desired thrust {desired_thrust_input}") #debug
+
+        #limit motorpowers
+        motorPower_m1 = self.limitThrust(desired_thrust_input - roll + pitch + yaw)
+        motorPower_m2 = self.limitThrust(desired_thrust_input - roll - pitch - yaw)
+        motorPower_m3 = self.limitThrust(desired_thrust_input + roll - pitch + yaw)
+        motorPower_m4 = self.limitThrust(desired_thrust_input + roll + pitch - yaw)
+
+        #todo: add idleThrust minimum
+
+        # new_pwm_signal = np.array([motorPower_m1, motorPower_m2, motorPower_m3, motorPower_m4]) #enginenode verwacht force
+        new_pwm_signal = np.array([0,0,0])
+        return dict(pwm_signal=Float32MultiArray(data=new_pwm_signal))
 
 
 class StateEstimator(eagerx.Node):
