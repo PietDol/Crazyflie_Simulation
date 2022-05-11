@@ -42,8 +42,8 @@ class Crazyflie(Object):
         spec.states.pos.space_converter = SpaceConverter.make(
             "Space_Float32MultiArray",
             dtype="float32",
-            low=[-1, -1, 0],
-            high=[1, 1, 0],
+            low=[-3, -3, 0],
+            high=[3, 3, 0],
         )
 
         # Velocity
@@ -51,8 +51,8 @@ class Crazyflie(Object):
         spec.sensors.vel.space_converter = SpaceConverter.make(
             "Space_Float32MultiArray",
             dtype="float32",
-            low=[-10, -10, -10],
-            high=[10, 10, 10],
+            low=[-100, -100, -100],
+            high=[100, 100, 100],
         )
         spec.states.vel.space_converter = SpaceConverter.make(
             "Space_Float32MultiArray",
@@ -112,8 +112,8 @@ class Crazyflie(Object):
         spec.actuators.external_force.space_converter = SpaceConverter.make(
             "Space_Float32MultiArray",
             dtype="float32",
-            low=[0.5, 0, 0],
-            high=[0.5, 0, 0],
+            low=[0.2, 0.2, 0],
+            high=[0.2, 0.2, 0],
         )
 
     @staticmethod
