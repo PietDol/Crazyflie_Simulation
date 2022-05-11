@@ -10,6 +10,7 @@ import csv
 import numpy as np
 import matplotlib.pyplot as plt
 import imageio
+import os, shutil
 
 # Plot the position and orientation from a CSV file
 # Format of CSV file (first row is a header row)
@@ -42,7 +43,7 @@ segmentLength = 0.2             # -     The length of the lines, representing th
 horAxisRange = [0, 8]           # m     The horizontal axis range
 vertAxisRange = [0.7, 1.3]      # m     The vertical axis range
 ratePlot = 5                    # Hz    The rate of lines drawn in the plot
-rateAnimation = 10             # Hz    The rate of the animation saved as a GIF
+rateAnimation = 50              # Hz    The rate of the animation saved as a GIF (max 50)
 
 plt.figure(1)
 timeStamps = []
@@ -84,6 +85,16 @@ plt.show()
 plt.figure(2)
 filenames = []
 directory = "logDirectory/gif"      # Directory where the PNGs are stored
+for filename in os.listdir(directory):
+    file_path = os.path.join(directory, filename)
+    try:
+        if os.path.isfile(file_path) or os.path.islink(file_path):
+            os.unlink(file_path)
+        elif os.path.isdir(file_path):
+            shutil.rmtree(file_path)
+    except Exception as e:
+        print('Failed to delete %s. Reason: %s' % (file_path, e))
+
 for i in range(len(reducedX)):
     if i % int(1/(dt * rateAnimation)) == 0:
         x = [reducedX[i] - horSegment*np.cos(reducedPitch[i]), reducedX[i] + horSegment*np.cos(reducedPitch[i])]
