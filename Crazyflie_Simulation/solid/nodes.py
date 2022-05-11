@@ -47,6 +47,10 @@ class AttitudePID(eagerx.Node):
     @eagerx.register.inputs(desired_attitude=Float32MultiArray, current_attitude=Float32MultiArray)
     @eagerx.register.outputs(new_attitude_rate=Float32MultiArray)
     def callback(self, t_n: float, desired_attitude: Msg, current_attitude: Msg):
+        current_attitude = current_attitude.msgs[-1].data
+        desired_attitude = desired_attitude.msgs[-1].data
+
+        error = desired_attitude - current_attitude
         test = np.array([0, 0, 0])
         return dict(new_attitude_rate=Float32MultiArray(data=test))
 

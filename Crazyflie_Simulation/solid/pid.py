@@ -1,42 +1,35 @@
-from collections import deque
-
-
 class PID:
-    def __init__(self, u0: float, kp: float, kd: float, ki: float, dt: float):
-        self.u0 = u0
+    def __init__(self, kp, ki, kd, rate):
         self.kp = kp
-        self.kd = kd
         self.ki = ki
-        self.dt = dt
-
-        self.F = [kp + ki * dt + kd / dt, -kp - 2 * kd / dt, kd / dt]
-
-        self.window = None
-        self.u = None
+        self.kd = kd
+        self.rate = rate
+        self.prev_error = 0
 
     def reset(self):
-        self.u = self.u0
-        self.window = deque(maxlen=3)
+        self.prev_error = 0
 
-    def next_action(self, y: float, ref: float = 0.0):
-        # Add error
-        self.window.appendleft(ref - y)
+    def update_pid(self, current, desired):
+        self.current = current
+        self.desired = desired
+        self.error = self.calc_error()
 
-        # Calculate action
-        for idx, e in enumerate(self.window):
-            self.u += self.F[idx] * e
+    def calc_error(self):
+        return self.desired - self.current
 
-        print(self.u)
+    def calc_prop(self):
+        return self.kp * self.error
 
-        return self.u
+    def calc_integral(self):
+        integ = self.error * (1 / self.rate)
+        return self.ki * integ
 
+    def calc_deriv(self):
+        deriv = (self.error - self.prev_error) / (1 / self.rate)
+        return self.kd * deriv
 
-# Try some things
-gains = [1.0, 0.5, 0.0]
-controller = PID(u0=0.0, kp=gains[0], kd=gains[1], ki=gains[2], dt=1/20)
-controller.reset()
-controller.next_action(4)
-controller.next_action(3)
-controller.next_action(2)
-controller.next_action(1)
-controller.next_action(0.5)
+    def next_action(self, current, desired):
+        self.update_pid(current, desired)
+        next_action = self.calc_prop() + self.calc_integral() + self.calc_deriv()
+        self.prev_error = self.error
+        return next_action
