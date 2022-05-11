@@ -73,8 +73,8 @@ class AttitudeRatePID(eagerx.Node):
         # Add space converters
         spec.inputs.desired_rate.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray", [0, 0, 0],
                                                                               [3, 3, 3], dtype="float32")
-        spec.inputs.current_rate.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray", [0, 0, 0],
-                                                                              [3, 3, 3], dtype="float32")
+        spec.inputs.current_rate.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray", [50000, 50000, 50000],
+                                                                              [50000, 50000, 50000], dtype="float32")
         spec.outputs.new_motor_control.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
                                                                                     [-32767, -32767, -32767],
                                                                                     [32767, 32767, 32767],
@@ -90,7 +90,9 @@ class AttitudeRatePID(eagerx.Node):
     @eagerx.register.inputs(desired_rate=Float32MultiArray, current_rate=Float32MultiArray)
     @eagerx.register.outputs(new_motor_control=Float32MultiArray)
     def callback(self, t_n: float, desired_rate: Msg, current_rate: Msg):
-        test = np.array([0, 0, 0])
+        # test = np.array([35000, 0, 0])
+        test = (current_rate.msgs[-1].data)
+        print(test)
         return dict(new_motor_control=Float32MultiArray(data=test))
 
 
@@ -115,15 +117,11 @@ class PowerDistribution(eagerx.Node):
 
         # Add space converters
         spec.inputs.desired_thrust.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
-                                                                                [[0, 0, 0], [0, 0, 0], [0, 0, 0],
-                                                                                 [0, 0, 0]],
-                                                                                [[3, 3, 3], [3, 3, 3], [3, 3, 3],
-                                                                                 [3, 3, 3]], dtype="float32")
+                                                                                [0],
+                                                                                 [65535], dtype="float32")
         spec.inputs.calculated_control.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
-                                                                                    [[0, 0, 0], [0, 0, 0], [0, 0, 0],
-                                                                                     [0, 0, 0]],
-                                                                                    [[3, 3, 3], [3, 3, 3], [3, 3, 3],
-                                                                                     [3, 3, 3]], dtype="float32")
+                                                                                    [-32767, -32767, -32767],
+                                                                                    [32767, 32767, 32767], dtype="float32")
         spec.outputs.pwm_signal.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
                                                                              [0, 0, 0, 0],
                                                                              [65535, 65535, 65535, 65535],
@@ -139,7 +137,9 @@ class PowerDistribution(eagerx.Node):
     @eagerx.register.inputs(desired_thrust=Float32MultiArray, calculated_control=Float32MultiArray)
     @eagerx.register.outputs(pwm_signal=Float32MultiArray)
     def callback(self, t_n: float, desired_thrust: Msg, calculated_control: Msg):
-        test = np.array([0.2, 0, 0])
+        desired_thrust.msgs[-1].data = [30000] #set input at 30000
+        print(calculated_control.msgs[-1].data[0])
+        test = np.array([0.5, 0, 0])
         return dict(pwm_signal=Float32MultiArray(data=test))
 
 
