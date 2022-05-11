@@ -9,8 +9,8 @@ from eagerx.core.graph_engine import EngineGraph
 import eagerx.core.register as register
 
 
-class Solid(Object):
-    entity_id = "Solid"
+class Crazyflie(Object):
+    entity_id = "Crazyflie"
 
     @staticmethod
     @register.sensors(
@@ -133,7 +133,7 @@ class Solid(Object):
     ):
         """Object spec of Solid"""
         # Performs all the steps to fill-in the params with registered info about all functions.
-        Solid.initialize_spec(spec)
+        Crazyflie.initialize_spec(spec)
 
         # Modify default agnostic params
         # Only allow changes to the agnostic params (rates, windows, (space)converters, etc...
@@ -150,7 +150,7 @@ class Solid(Object):
         spec.config.fixed_base = fixed_base
 
         # Add agnostic implementation
-        Solid.agnostic(spec, rate)
+        Crazyflie.agnostic(spec, rate)
 
     @staticmethod
     @register.bridge(entity_id, PybulletBridge)
@@ -207,8 +207,8 @@ class Solid(Object):
         # graph.is_valid(plot=True)
 
 
-class Solid1(Object):
-    entity_id = "Solid1"
+class Solid(Object):
+    entity_id = "Solid"
 
     @staticmethod
     @register.sensors(
@@ -221,7 +221,7 @@ class Solid1(Object):
         angular_vel=Float32MultiArray,
         lateral_friction=Float32,
     )
-    # @register.actuators(external_force=Float32MultiArray)
+    @register.actuators(external_force=Float32MultiArray)
     @register.config(urdf=None, fixed_base=True, self_collision=True, base_pos=[0, 0, 0], base_or=[0, 0, 0, 1])
     def agnostic(spec: ObjectSpec, rate):
         """Agnostic definition of the Solid"""
@@ -297,12 +297,12 @@ class Solid1(Object):
         )
 
         # Actuators
-        # spec.actuators.external_force.space_converter = SpaceConverter.make(
-        #     "Space_Float32MultiArray",
-        #     dtype="float32",
-        #     low=[0, 0, -10],
-        #     high=[0, 0, 10],
-        # )
+        spec.actuators.external_force.space_converter = SpaceConverter.make(
+            "Space_Float32MultiArray",
+            dtype="float32",
+            low=[0, 0, 0],
+            high=[0.2, 0, 0],
+        )
 
     @staticmethod
     @register.spec(entity_id, Object)
@@ -312,7 +312,7 @@ class Solid1(Object):
             urdf: str,
             sensors=None,
             states=None,
-            # actuators=None,
+            actuators=None,
             rate=30,
             base_pos=None,
             base_or=None,
@@ -321,14 +321,14 @@ class Solid1(Object):
     ):
         """Object spec of Solid"""
         # Performs all the steps to fill-in the params with registered info about all functions.
-        Solid1.initialize_spec(spec)
+        Solid.initialize_spec(spec)
 
         # Modify default agnostic params
         # Only allow changes to the agnostic params (rates, windows, (space)converters, etc...
         spec.config.name = name
         spec.config.sensors = sensors if sensors is not None else ["pos", "vel", "orientation", "angular_vel"]
         spec.config.states = states if states is not None else ["pos", "vel", "orientation", "angular_vel"]
-        # spec.config.actuators = actuators if actuators is not None else ["external_force"]
+        spec.config.actuators = actuators if actuators is not None else ["external_force"]
 
         # Add registered agnostic params
         spec.config.urdf = urdf
@@ -338,14 +338,14 @@ class Solid1(Object):
         spec.config.fixed_base = fixed_base
 
         # Add agnostic implementation
-        Solid1.agnostic(spec, rate)
+        Solid.agnostic(spec, rate)
 
     @staticmethod
     @register.bridge(entity_id, PybulletBridge)
     def pybullet_bridge(spec: ObjectSpec, graph: EngineGraph):
         """Engine-specific implementation (Pybullet) of the object."""
         # Import any object specific entities for this bridge
-        import eagerx_interbotix.solid.pybullet  # noqa # pylint: disable=unused-import
+        import Crazyflie_Simulation.solid.pybullet  # noqa # pylint: disable=unused-import
         import eagerx_pybullet  # noqa # pylint: disable=unused-import
 
         # Set object arguments (as registered per register.bridge_params(..) above the bridge.add_object(...) method.
@@ -375,17 +375,17 @@ class Solid1(Object):
 
         # Create actuator engine nodes
         # Rate=None, but we will connect it to an actuator (thus will use the rate set in the agnostic specification)
-        # external_force = EngineNode.make(
-        #     "ForceController", "external_force", rate=spec.actuators.external_force.rate, process=2, mode="external_force"
-        # )
+        external_force = EngineNode.make(
+            "ForceController", "external_force", rate=spec.actuators.external_force.rate, process=2, mode="external_force"
+        )
 
         # Connect all engine nodes
-        # graph.add([pos, vel, orientation, angular_vel, external_force])
+        graph.add([pos, vel, orientation, angular_vel, external_force])
         graph.connect(source=pos.outputs.obs, sensor="pos")
         graph.connect(source=vel.outputs.obs, sensor="vel")
         graph.connect(source=orientation.outputs.obs, sensor="orientation")
         graph.connect(source=angular_vel.outputs.obs, sensor="angular_vel")
-        # graph.connect(actuator="external_force", target=external_force.inputs.action)
+        graph.connect(actuator="external_force", target=external_force.inputs.action)
 
         # Check graph validity (commented out)
         # graph.is_valid(plot=True)

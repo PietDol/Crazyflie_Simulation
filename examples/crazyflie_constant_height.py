@@ -35,7 +35,7 @@ if __name__ == "__main__":
     # Create solid object
     urdf_path = os.path.dirname(Crazyflie_Simulation.__file__) + "/solid/assets/"
     crazyflie = eagerx.Object.make(
-        "Solid", "crazyflie", urdf=urdf_path + "cf2x.urdf", rate=rate, sensors=["orientation", "gyroscope", "accelerometer"], actuators=["external_force"],
+        "Crazyflie", "crazyflie", urdf=urdf_path + "cf2x.urdf", rate=rate, sensors=["orientation", "gyroscope", "accelerometer"], actuators=["external_force"],
         base_pos=[0, 0, 1], fixed_base=False,
         states=["pos", "vel", "orientation", "angular_vel"]
     )
