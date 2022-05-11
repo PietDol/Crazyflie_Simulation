@@ -182,10 +182,10 @@ class Crazyflie(Object):
             "LinkSensor", "orientation", rate=spec.sensors.orientation.rate, process=2, mode="orientation"
         )
         gyroscope = EngineNode.make(
-            "LinkSensor", "gyroscope", rate=spec.sensors.gyroscope.rate, process=2, mode="gyroscope"
+            "LinkSensor", "gyroscope", rate=spec.sensors.gyroscope.rate, process=2, mode="angular_vel"
         )
         accelerometer = EngineNode.make(
-            "LinkSensor", "accelerometer", rate=spec.sensors.accelerometer.rate, process=2, mode="accelerometer"
+            "LinkSensor", "accelerometer", rate=spec.sensors.accelerometer.rate, process=2, mode="angular_vel"
         )
 
         # Create actuator engine nodes
@@ -199,8 +199,8 @@ class Crazyflie(Object):
         graph.connect(source=pos.outputs.obs, sensor="pos")
         graph.connect(source=vel.outputs.obs, sensor="vel")
         graph.connect(source=orientation.outputs.obs, sensor="orientation")
-        graph.connect(source=gyroscope.outputs.obs, sensor="angular_vel")
-        graph.connect(source=accelerometer.output.obs, sensor="acceleration")
+        graph.connect(source=gyroscope.outputs.obs, sensor="gyroscope")
+        graph.connect(source=accelerometer.outputs.obs, sensor="accelerometer")
         graph.connect(actuator="external_force", target=external_force.inputs.action)
 
         # Check graph validity (commented out)

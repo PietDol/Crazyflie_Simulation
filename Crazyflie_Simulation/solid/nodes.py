@@ -2,6 +2,7 @@ import eagerx
 import eagerx.converters  # Registers space converters
 from eagerx.utils.utils import Msg
 from std_msgs.msg import Float32, Float32MultiArray
+import numpy as np
 
 
 # todo: implement functions for the nodes
@@ -45,8 +46,9 @@ class AttitudePID(eagerx.Node):
 
     @eagerx.register.inputs(desired_attitude=Float32MultiArray, current_attitude=Float32MultiArray)
     @eagerx.register.outputs(new_attitude_rate=Float32MultiArray)
-    def callback(self, t_n: float, signal: Msg):
-        pass
+    def callback(self, t_n: float, desired_attitude: Msg, current_attitude: Msg):
+        test = np.array([0, 0, 0])
+        return dict(new_attitude_rate=Float32MultiArray(data=test))
 
 
 class AttitudeRatePID(eagerx.Node):
@@ -87,8 +89,9 @@ class AttitudeRatePID(eagerx.Node):
 
     @eagerx.register.inputs(desired_rate=Float32MultiArray, current_rate=Float32MultiArray)
     @eagerx.register.outputs(new_motor_control=Float32MultiArray)
-    def callback(self, t_n: float, signal: Msg):
-        pass
+    def callback(self, t_n: float, desired_rate: Msg, current_rate: Msg):
+        test = np.array([0, 0, 0])
+        return dict(new_motor_control=Float32MultiArray(data=test))
 
 
 class PowerDistribution(eagerx.Node):
@@ -135,8 +138,9 @@ class PowerDistribution(eagerx.Node):
 
     @eagerx.register.inputs(desired_thrust=Float32MultiArray, calculated_control=Float32MultiArray)
     @eagerx.register.outputs(pwm_signal=Float32MultiArray)
-    def callback(self, t_n: float, signal: Msg):
-        pass
+    def callback(self, t_n: float, desired_thrust: Msg, calculated_control: Msg):
+        test = np.array([0, 0, 0])
+        return dict(pwm_signal=Float32MultiArray(data=test))
 
 
 class StateEstimator(eagerx.Node):
@@ -178,5 +182,6 @@ class StateEstimator(eagerx.Node):
 
     @eagerx.register.inputs(angular_velocity=Float32MultiArray, acceleration=Float32MultiArray)
     @eagerx.register.outputs(orientation=Float32MultiArray)
-    def callback(self, t_n: float, signal: Msg):
-        pass
+    def callback(self, t_n: float, angular_velocity: Msg, acceleration: Msg):
+        test = np.array([0, 0, 0])
+        return dict(orientation=Float32MultiArray(data=test))
