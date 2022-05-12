@@ -161,13 +161,13 @@ class PowerDistribution(eagerx.Node):
 
     # limit motorpowers definition
     def limitThrust(self, value):
-        if (value > 65535):
+        if value > 65535:
             value = 65535
-        elif (value < 0):
+        elif value < 0:
             value = 0
         return value
 
-    #limit minimum idle Thrust definition
+    # limit minimum idle Thrust definition
     def limitIdleThrust(self, value, minimum):
         if (value < minimum):
             value = minimum
@@ -192,8 +192,8 @@ class PowerDistribution(eagerx.Node):
         motorPower_m3 = self.limitThrust(desired_thrust_input + roll - pitch + yaw)
         motorPower_m4 = self.limitThrust(desired_thrust_input + roll + pitch - yaw)
 
-        #limit minimum idle Thrust
-        minimumIdleThrust = 0 #PWM signal, default = 0
+        # limit minimum idle Thrust
+        minimumIdleThrust = 0  # PWM signal, default = 0
         motorPower_m1 = self.limitIdleThrust(motorPower_m1, minimumIdleThrust)
         motorPower_m2 = self.limitIdleThrust(motorPower_m2, minimumIdleThrust)
         motorPower_m3 = self.limitIdleThrust(motorPower_m3, minimumIdleThrust)
@@ -201,7 +201,8 @@ class PowerDistribution(eagerx.Node):
 
         # print(motorPower_m4) # debug
 
-        new_pwm_signal = np.array([motorPower_m1, motorPower_m2, motorPower_m3, motorPower_m4]) #enginenode verwacht force
+        new_pwm_signal = np.array(
+            [motorPower_m1, motorPower_m2, motorPower_m3, motorPower_m4])  # enginenode verwacht force
         # new_pwm_signal = np.array([3,3,0])
         return dict(pwm_signal=Float32MultiArray(data=new_pwm_signal))
 
@@ -246,7 +247,8 @@ class StateEstimator(eagerx.Node):
     def reset(self):
         pass
 
-    @eagerx.register.inputs(angular_velocity=Float32MultiArray, acceleration=Float32MultiArray, orientation=Float32MultiArray)
+    @eagerx.register.inputs(angular_velocity=Float32MultiArray, acceleration=Float32MultiArray,
+                            orientation=Float32MultiArray)
     @eagerx.register.outputs(orientation=Float32MultiArray)
     def callback(self, t_n: float, angular_velocity: Msg, acceleration: Msg, orientation: Msg):
         attitude = orientation.msgs[-1].data
