@@ -26,8 +26,8 @@ if __name__ == "__main__":
 
     # Define rate
     real_reset = False
-    rate = 20
-    safe_rate = 20
+    rate = 500
+    safe_rate = 500
     max_steps = 300
 
     # Initialize empty graph
@@ -144,19 +144,20 @@ if __name__ == "__main__":
     for eps in range(5000):
         print(f"Episode {eps}")
         _, done = env.reset(), False
-        desired_altitude = 1
+        desired_altitude = 1.2
         while not done:
-            desired_thrust_pid = PID(kp=2000, ki=250, kd=50000000, rate=rate) #kp 2500 ki 0.2 kd 10000
+            desired_thrust_pid = PID(kp=100000, ki=500, kd=250, rate=rate) #kp 2500 ki 0.2 kd 10000
 
             action = env.action_space.sample()
-            action["desired_attitude"][0] = 0
-            action["desired_attitude"][1] = 0
-            action["desired_attitude"][2] = 0
+            action["desired_attitude"][0] = 0           # Roll
+            action["desired_attitude"][1] = 10           # Pitch
+            action["desired_attitude"][2] = 0           # Yaw
             try:
                 action["desired_thrust"][0] = desired_thrust_pid.next_action(current=obs["position"][0][2], desired=desired_altitude)
             except:
                 print("fucked") # debug
                 action["desired_thrust"][0] = desired_thrust_pid.next_action(current=0, desired=desired_altitude)
+            # action["desired_thrust"][0] = 36100
             obs, reward, done, info = env.step(action)
             rgb = env.render("rgb_array")
             # print("Orientation:")
