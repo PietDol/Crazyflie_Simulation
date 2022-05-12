@@ -35,7 +35,7 @@ if __name__ == "__main__":
     # Create solid object
     urdf_path = os.path.dirname(Crazyflie_Simulation.__file__) + "/solid/assets/"
     crazyflie = eagerx.Object.make(
-        "Crazyflie", "crazyflie", urdf=urdf_path + "cf2x.urdf", rate=rate, sensors=["orientation", "gyroscope", "accelerometer"], actuators=["pwm_input"],
+        "Crazyflie", "crazyflie", urdf=urdf_path + "cf2x.urdf", rate=rate, sensors=["pos", "orientation", "gyroscope", "accelerometer"], actuators=["pwm_input"],
         base_pos=[0, 0, 1], fixed_base=False,
         states=["pos", "vel", "orientation", "angular_vel"]
     )
@@ -70,7 +70,8 @@ if __name__ == "__main__":
     graph.add(state_estimator)
 
     # Connecting observations
-    graph.connect(source=crazyflie.sensors.orientation, observation="crazyflie")
+    graph.connect(source=crazyflie.sensors.orientation, observation="orientation")
+    graph.connect(source=crazyflie.sensors.pos, observation="position")
 
     # Connecting actions
     # graph.connect(action="external_force", target=solid.actuators.external_force)
@@ -104,7 +105,8 @@ if __name__ == "__main__":
         # Set info:
         info = dict()
         # Calculate reward
-        can = obs["crazyflie"][0]
+
+        can = obs["position"][0]
         # Penalize distance of the end-effector to the object
         rwd = 0
         # Determine done flag
@@ -143,5 +145,14 @@ if __name__ == "__main__":
         _, done = env.reset(), False
         while not done:
             action = env.action_space.sample()
+            action["desired_attitude"][0] = 0
+            action["desired_attitude"][1] = 0
+            action["desired_attitude"][2] = 0
+            action["desired_thrust"][0] = 35800
             obs, reward, done, info = env.step(action)
             rgb = env.render("rgb_array")
+            print("Orientation:")
+            print(obs["orientation"])
+            print("Position:")
+            print(obs["position"])
+

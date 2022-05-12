@@ -152,7 +152,7 @@ class ForceController(EngineNode):
 
         Input `tick` ensures that this node is I/O synchronized with the simulator."""
         action_applied = action.msgs[-1]
-        # action_applied.data = np.array([40000, 40000, 40500, 40500])  # debug
+        # action_applied.data = np.array([40000, 40000, 40000, 40000])  # debug
         self.force_cb(action_applied.data)
         self.torque_cb(action_applied.data)
 
