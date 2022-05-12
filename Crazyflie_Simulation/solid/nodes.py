@@ -194,7 +194,7 @@ class PowerDistribution(eagerx.Node):
         motorPower_m3 = self.limitIdleThrust(motorPower_m3, minimumIdleThrust)
         motorPower_m4 = self.limitIdleThrust(motorPower_m4, minimumIdleThrust)
 
-        print(motorPower_m4)
+        # print(motorPower_m4) # debug
 
         new_pwm_signal = np.array([motorPower_m1, motorPower_m2, motorPower_m3, motorPower_m4]) #enginenode verwacht force
         # new_pwm_signal = np.array([3,3,0])
