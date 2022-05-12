@@ -176,7 +176,7 @@ class PowerDistribution(eagerx.Node):
     @eagerx.register.inputs(desired_thrust=Float32MultiArray, calculated_control=Float32MultiArray)
     @eagerx.register.outputs(pwm_signal=Float32MultiArray)
     def callback(self, t_n: float, desired_thrust: Msg, calculated_control: Msg):
-        desired_thrust.msgs[-1].data = [10000]  # set input at 30000, moet nog vanuit env/actions komen
+        desired_thrust.msgs[-1].data  # set input at 30000, moet nog vanuit env/actions komen
 
         # define variables from inputs
         calculated_control_input = calculated_control.msgs[-1].data  # roll pitch yaw
