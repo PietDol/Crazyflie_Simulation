@@ -98,7 +98,7 @@ class ForceController(EngineNode):
                     forces[idx] = (2.130295e-11) * (pwm) ** 2 + (1.032633e-6) * pwm + 5.484560e-4
                 total_force = np.array([0, 0, np.sum(forces)])
                 # print(f"Force: {total_force}")  # debug
-                return p.applyExternalForce(
+                p.applyExternalForce(
                     objectUniqueId=objectUniqueId,
                     linkIndex=linkIndex[0],
                     forceObj=total_force,
@@ -106,6 +106,13 @@ class ForceController(EngineNode):
                     flags=pybullet.LINK_FRAME,
                     physicsClientId=p._client,
                 )
+                # p.applyExternalForce(
+                #     objectUniqueId=1,
+                #     linkIndex=-1,
+                #     forceObj=(0, 0, 0.04 * 9.81),
+                #     posObj=(0, 0, 0),
+                #     flags=p.LINK_FRAME,
+                # )
         elif mode == "torque_control":
             # based on coordinate system: https://www.bitcraze.io/documentation/system/platform/cf2-coordinate-system/
             # motor numbers: https://www.bitcraze.io/documentation/hardware/crazyflie_2_1/crazyflie_2_1-datasheet.pdf
@@ -126,7 +133,7 @@ class ForceController(EngineNode):
                     torques[idx] = np.cross(arms[idx], np.array([0, 0, force]))
                     total_torque = total_torque + torques[idx]
                 # print(f"Torque: {total_torque}")  # debug
-                return p.applyExternalTorque(
+                p.applyExternalTorque(
                     objectUniqueId=objectUniqueId,
                     linkIndex=linkIndex[0],
                     torqueObj=total_torque,
@@ -152,7 +159,7 @@ class ForceController(EngineNode):
 
         Input `tick` ensures that this node is I/O synchronized with the simulator."""
         action_applied = action.msgs[-1]
-        # action_applied.data = np.array([40000, 40000, 40500, 40500])  # debug
+        action_applied.data = np.array([37000, 37000, 37000, 37000])  # debug
         self.force_cb(action_applied.data)
         self.torque_cb(action_applied.data)
 

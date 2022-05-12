@@ -96,7 +96,7 @@ if __name__ == "__main__":
 
     # Define bridges
     # bridge = Bridge.make("RealBridge", rate=rate, sync=True, process=process.NEW_PROCESS)
-    bridge = eagerx.Bridge.make("PybulletBridge", rate=safe_rate, gui=True, egl=True, sync=True, real_time_factor=0.0,
+    bridge = eagerx.Bridge.make("PybulletBridge", rate=safe_rate, gui=True, egl=True, sync=True, real_time_factor=1.0,
                                 process=eagerx.process.ENVIRONMENT)  # delete process to run faster, this is useful for debugger
 
     # Define step function
@@ -127,7 +127,7 @@ if __name__ == "__main__":
         # Set orientation
         states["crazyflie/orientation"] = np.array([0, 0, 0, 1])
 
-        states["crazyflie/pos"] = np.array([0, 0, 0])
+        states["crazyflie/pos"] = np.array([0, 0, 1])
         return states
 
 
