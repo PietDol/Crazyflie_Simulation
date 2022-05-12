@@ -82,6 +82,7 @@ if __name__ == "__main__":
     graph.connect(source=crazyflie.sensors.gyroscope, target=state_estimator.inputs.angular_velocity)
     graph.connect(source=crazyflie.sensors.gyroscope, target=attitude_rate_pid.inputs.current_rate)
     graph.connect(source=crazyflie.sensors.accelerometer, target=state_estimator.inputs.acceleration)
+    graph.connect(source=crazyflie.sensors.orientation, target=state_estimator.inputs.orientation)
     graph.connect(source=state_estimator.outputs.orientation, target=attitude_pid.inputs.current_attitude)
 
     # Create reset node
@@ -115,6 +116,7 @@ if __name__ == "__main__":
             if done:
                 rwd = -50
         # done = done | (np.linalg.norm(goal - can) < 0.1 and can[2] < 0.05)  # Can has not fallen down & within threshold.
+        done = False
         return obs, rwd, done, info
 
 

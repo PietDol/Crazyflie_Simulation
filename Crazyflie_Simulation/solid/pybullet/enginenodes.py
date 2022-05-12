@@ -12,20 +12,21 @@ from eagerx.core.constants import process as p
 from eagerx.utils.utils import Msg
 from eagerx.core.entities import EngineNode, SpaceConverter
 import eagerx.core.register as register
+import numpy as np
 
 
 class ForceController(EngineNode):
     @staticmethod
     @register.spec("ForceController", EngineNode)
     def spec(
-        spec: NodeSpec,
-        name: str,
-        rate: float,
-        links: List[str] = None,
-        process: Optional[int] = p.BRIDGE,
-        color: Optional[str] = "pink",
-        mode: str = "external_force", # = mode?
-        force_target: List[float] = None,
+            spec: NodeSpec,
+            name: str,
+            rate: float,
+            links: List[str] = None,
+            process: Optional[int] = p.BRIDGE,
+            color: Optional[str] = "pink",
+            mode: str = "external_force",  # = mode?
+            force_target: List[float] = None,
     ):
         # Performs all the steps to fill-in the params with registered info about all functions.
         spec.initialize(ForceController)
@@ -79,23 +80,62 @@ class ForceController(EngineNode):
             self.linkIndex,
             [0, 0, 0]
         )
+        self.torque_cb = self._force_control(
+            self._p,
+            "torque_control",
+            self.objectUniqueId[0],
+            self.linkIndex,
+            [0, 0, 0]
+        )
 
     @staticmethod
     def _force_control(p, mode, objectUniqueId, linkIndex, posObj):
         if mode == "external_force":
             def cb(action):
-                #todo: HIER NOG PWM NAAR FORCE OMREKENEN
-                action = action[:3]
+                pwm = action[:4]
+                forces = np.zeros(len(pwm))
+                for idx, pwm in enumerate(pwm):
+                    forces[idx] = (2.130295e-11) * (pwm) ** 2 + (1.032633e-6) * pwm + 5.484560e-4
+                total_force = np.array([0, 0, np.sum(forces)])
+                # print(f"Force: {total_force}")  # debug
                 return p.applyExternalForce(
                     objectUniqueId=objectUniqueId,
                     linkIndex=linkIndex[0],
-                    forceObj=action,
+                    forceObj=total_force,
                     posObj=posObj,
+                    flags=pybullet.LINK_FRAME,
+                    physicsClientId=p._client,
+                )
+        elif mode == "torque_control":
+            # based on coordinate system: https://www.bitcraze.io/documentation/system/platform/cf2-coordinate-system/
+            # motor numbers: https://www.bitcraze.io/documentation/hardware/crazyflie_2_1/crazyflie_2_1-datasheet.pdf
+            arm_1 = np.array([0.028, -0.028, 0])
+            arm_2 = np.array([-0.028, -0.028, 0])
+            arm_3 = np.array([-0.028, 0.028, 0])
+            arm_4 = np.array([0.028, 0.028, 0])
+            arms = np.array([arm_1, arm_2, arm_3, arm_4])
+
+            def cb(action):
+                pwm = action[:4]
+                forces = np.zeros(len(pwm))
+                torques = np.zeros((len(pwm), 3))
+                total_torque = np.array([0, 0, 0])
+                for idx, pwm in enumerate(pwm):
+                    force = (2.130295e-11) * (pwm) ** 2 + (1.032633e-6) * pwm + 5.484560e-4
+                    forces[idx] = force
+                    torques[idx] = np.cross(arms[idx], np.array([0, 0, force]))
+                    total_torque = total_torque + torques[idx]
+                # print(f"Torque: {total_torque}")  # debug
+                return p.applyExternalTorque(
+                    objectUniqueId=objectUniqueId,
+                    linkIndex=linkIndex[0],
+                    torqueObj=total_torque,
                     flags=pybullet.LINK_FRAME,
                     physicsClientId=p._client,
                 )
         else:
             raise ValueError(f"Mode '{mode}' not recognized.")
+        # todo: add yaw torque
         return cb
 
     @register.states()
@@ -112,9 +152,11 @@ class ForceController(EngineNode):
 
         Input `tick` ensures that this node is I/O synchronized with the simulator."""
         action_applied = action.msgs[-1]
-        _ = self.force_cb(action_applied.data)
-        return dict(action_applied=action_applied)
+        # action_applied.data = np.array([40000, 40000, 40500, 40500])  # debug
+        self.force_cb(action_applied.data)
+        self.torque_cb(action_applied.data)
 
+        return dict(action_applied=action_applied)
 
 # class LinkSensor(EngineNode):
 #     @staticmethod

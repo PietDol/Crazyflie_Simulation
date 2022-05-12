@@ -59,7 +59,7 @@ class AttitudePID(eagerx.Node):
         next_yaw = self.attitude_pid_yaw.next_action(current=current_attitude[0], desired=desired_attitude[0])
         next_pitch = self.attitude_pid_pitch.next_action(current=current_attitude[1], desired=desired_attitude[1])
         next_roll = self.attitude_pid_roll.next_action(current=current_attitude[2], desired=desired_attitude[2])
-        next_action = np.array([next_yaw, next_pitch, next_roll])
+        next_action = np.array([next_roll, next_pitch, next_yaw])
         return dict(new_attitude_rate=Float32MultiArray(data=next_action))
 
 
@@ -85,7 +85,8 @@ class AttitudeRatePID(eagerx.Node):
         # Add space converters
         spec.inputs.desired_rate.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray", [0, 0, 0],
                                                                               [3, 3, 3], dtype="float32")
-        spec.inputs.current_rate.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray", [50000, 50000, 50000],
+        spec.inputs.current_rate.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
+                                                                              [50000, 50000, 50000],
                                                                               [50000, 50000, 50000], dtype="float32")
         spec.outputs.new_motor_control.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
                                                                                     [-32767, -32767, -32767],
@@ -106,13 +107,16 @@ class AttitudeRatePID(eagerx.Node):
     @eagerx.register.inputs(desired_rate=Float32MultiArray, current_rate=Float32MultiArray)
     @eagerx.register.outputs(new_motor_control=Float32MultiArray)
     def callback(self, t_n: float, desired_rate: Msg, current_rate: Msg):
-        current_attitude = current_rate.msgs[-1].data
-        desired_attitude = desired_rate.msgs[-1].data
+        current_attitude_rate = current_rate.msgs[-1].data
+        desired_attitude_rate = desired_rate.msgs[-1].data
 
-        next_yaw_rate = self.attitude_rate_pid_yaw.next_action(current=current_attitude[0], desired=desired_attitude[0])
-        next_pitch_rate = self.attitude_rate_pid_pitch.next_action(current=current_attitude[1], desired=desired_attitude[1])
-        next_roll_rate = self.attitude_rate_pid_roll.next_action(current=current_attitude[2], desired=desired_attitude[2])
-        next_action = np.array([next_yaw_rate, next_pitch_rate, next_roll_rate])
+        next_yaw_rate = self.attitude_rate_pid_yaw.next_action(current=current_attitude_rate[0],
+                                                               desired=desired_attitude_rate[0])
+        next_pitch_rate = self.attitude_rate_pid_pitch.next_action(current=current_attitude_rate[1],
+                                                                   desired=desired_attitude_rate[1])
+        next_roll_rate = self.attitude_rate_pid_roll.next_action(current=current_attitude_rate[2],
+                                                                 desired=desired_attitude_rate[2])
+        next_action = np.array([next_roll_rate, next_pitch_rate, next_yaw_rate])
         return dict(new_motor_control=Float32MultiArray(data=next_action))
 
 
@@ -138,10 +142,11 @@ class PowerDistribution(eagerx.Node):
         # Add space converters
         spec.inputs.desired_thrust.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
                                                                                 [0],
-                                                                                 [65535], dtype="float32")
+                                                                                [65535], dtype="float32")
         spec.inputs.calculated_control.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
                                                                                     [-32767, -32767, -32767],
-                                                                                    [32767, 32767, 32767], dtype="float32")
+                                                                                    [32767, 32767, 32767],
+                                                                                    dtype="float32")
         spec.outputs.pwm_signal.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
                                                                              [0, 0, 0, 0],
                                                                              [65535, 65535, 65535, 65535],
@@ -154,7 +159,7 @@ class PowerDistribution(eagerx.Node):
     def reset(self):
         pass
 
-    #limit motorpowers definition
+    # limit motorpowers definition
     def limitThrust(self, value):
         if (value > 65535):
             value = 65535
@@ -165,25 +170,26 @@ class PowerDistribution(eagerx.Node):
     @eagerx.register.inputs(desired_thrust=Float32MultiArray, calculated_control=Float32MultiArray)
     @eagerx.register.outputs(pwm_signal=Float32MultiArray)
     def callback(self, t_n: float, desired_thrust: Msg, calculated_control: Msg):
-        desired_thrust.msgs[-1].data = [10000] #set input at 30000, moet nog vanuit env/actions komen
+        desired_thrust.msgs[-1].data = [10000]  # set input at 30000, moet nog vanuit env/actions komen
 
-        #define variables from inputs
-        calculated_control_input = calculated_control.msgs[-1].data #roll pitch yaw
+        # define variables from inputs
+        calculated_control_input = calculated_control.msgs[-1].data  # roll pitch yaw
         roll = calculated_control.msgs[-1].data[0]
         pitch = calculated_control.msgs[-1].data[1]
         yaw = calculated_control.msgs[-1].data[2]
         desired_thrust_input = desired_thrust.msgs[-1].data[0]
         # print(f"======\n calculated control = {calculated_control_input} \n desired thrust {desired_thrust_input}") #debug
 
-        #limit motorpowers
+        # limit motorpowers
         motorPower_m1 = self.limitThrust(desired_thrust_input - roll + pitch + yaw)
         motorPower_m2 = self.limitThrust(desired_thrust_input - roll - pitch - yaw)
         motorPower_m3 = self.limitThrust(desired_thrust_input + roll - pitch + yaw)
         motorPower_m4 = self.limitThrust(desired_thrust_input + roll + pitch - yaw)
 
-        #todo: add idleThrust minimum
+        # todo: add idleThrust minimum
 
-        new_pwm_signal = np.array([motorPower_m1, motorPower_m2, motorPower_m3, motorPower_m4]) #enginenode verwacht force
+        new_pwm_signal = np.array(
+            [motorPower_m1, motorPower_m2, motorPower_m3, motorPower_m4])  # enginenode verwacht force
         # new_pwm_signal = np.array([3,3,0])
         return dict(pwm_signal=Float32MultiArray(data=new_pwm_signal))
 
@@ -204,7 +210,7 @@ class StateEstimator(eagerx.Node):
         spec.config.name = name
         spec.config.rate = rate
         spec.config.process = eagerx.process.ENVIRONMENT
-        spec.config.inputs = ["angular_velocity", "acceleration"]
+        spec.config.inputs = ["angular_velocity", "acceleration", "orientation"]
         spec.config.outputs = ["orientation"]
 
         # Add space converters
@@ -214,6 +220,9 @@ class StateEstimator(eagerx.Node):
         spec.inputs.acceleration.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
                                                                               [0, 0, 0],
                                                                               [3, 3, 3], dtype="float32")
+        spec.inputs.orientation.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
+                                                                             [0, 0, 0],
+                                                                             [3, 3, 3], dtype="float32")
         spec.outputs.orientation.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
                                                                               [0, 0, 0],
                                                                               [3, 3, 3], dtype="float32")
@@ -225,8 +234,8 @@ class StateEstimator(eagerx.Node):
     def reset(self):
         pass
 
-    @eagerx.register.inputs(angular_velocity=Float32MultiArray, acceleration=Float32MultiArray)
+    @eagerx.register.inputs(angular_velocity=Float32MultiArray, acceleration=Float32MultiArray, orientation=Float32MultiArray)
     @eagerx.register.outputs(orientation=Float32MultiArray)
-    def callback(self, t_n: float, angular_velocity: Msg, acceleration: Msg):
-        test = np.array([0, 0, 0])
-        return dict(orientation=Float32MultiArray(data=test))
+    def callback(self, t_n: float, angular_velocity: Msg, acceleration: Msg, orientation: Msg):
+        attitude = orientation.msgs[-1].data
+        return dict(orientation=Float32MultiArray(data=attitude))
