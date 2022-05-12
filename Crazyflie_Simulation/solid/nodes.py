@@ -162,6 +162,12 @@ class PowerDistribution(eagerx.Node):
             value = 0
         return value
 
+    #limit minimum idle Thrust definition
+    def limitIdleThrust(self, value, minimum):
+        if (value < minimum):
+            value = minimum
+        return value
+
     @eagerx.register.inputs(desired_thrust=Float32MultiArray, calculated_control=Float32MultiArray)
     @eagerx.register.outputs(pwm_signal=Float32MultiArray)
     def callback(self, t_n: float, desired_thrust: Msg, calculated_control: Msg):
@@ -181,7 +187,14 @@ class PowerDistribution(eagerx.Node):
         motorPower_m3 = self.limitThrust(desired_thrust_input + roll - pitch + yaw)
         motorPower_m4 = self.limitThrust(desired_thrust_input + roll + pitch - yaw)
 
-        #todo: add idleThrust minimum
+        #limit minimum idle Thrust
+        minimumIdleThrust = 0 #PWM signal, default = 0
+        motorPower_m1 = self.limitIdleThrust(motorPower_m1, minimumIdleThrust)
+        motorPower_m2 = self.limitIdleThrust(motorPower_m2, minimumIdleThrust)
+        motorPower_m3 = self.limitIdleThrust(motorPower_m3, minimumIdleThrust)
+        motorPower_m4 = self.limitIdleThrust(motorPower_m4, minimumIdleThrust)
+
+        print(motorPower_m4)
 
         new_pwm_signal = np.array([motorPower_m1, motorPower_m2, motorPower_m3, motorPower_m4]) #enginenode verwacht force
         # new_pwm_signal = np.array([3,3,0])
