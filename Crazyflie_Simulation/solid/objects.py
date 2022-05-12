@@ -109,6 +109,7 @@ class Crazyflie(Object):
         )
 
         # Actuators
+        spec.actuators.pwm_input.rate = rate
         spec.actuators.pwm_input.space_converter = SpaceConverter.make(
             "Space_Float32MultiArray",
             dtype="float32",
