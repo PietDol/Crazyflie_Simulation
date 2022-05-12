@@ -251,3 +251,67 @@ class StateEstimator(eagerx.Node):
     def callback(self, t_n: float, angular_velocity: Msg, acceleration: Msg, orientation: Msg):
         attitude = orientation.msgs[-1].data
         return dict(orientation=Float32MultiArray(data=attitude))
+
+# class AltitudePID(eagerx.Node):
+#     @staticmethod
+#     @eagerx.register.spec("AltitudePID", eagerx.Node)
+#     def spec(
+#             spec,
+#             name: str,
+#             rate: float,
+#             n: int,
+#     ):
+#         # Performs all the steps to fill-in the params with registered info about all functions.
+#         spec.initialize(AltitudePID)
+#
+#         # Modify default node params
+#         spec.config.name = name
+#         spec.config.rate = rate
+#         spec.config.process = eagerx.process.ENVIRONMENT
+#         spec.config.inputs = ["estimated_position", "estimated_velocity", "desired_position"]
+#         spec.config.outputs = ["desired_attitude", "desired_thrust"]
+#
+#         # Add space converters
+#         spec.inputs.estimated_position.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray", [0, 0, 0],
+#                                                                               [3, 3, 3], dtype="float32")
+#         spec.inputs.estimated_velocity.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray", [0, 0, 0],
+#                                                                               [5, 5, 5], dtype="float32")
+#         spec.inputs.desired_position.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray", [0, 0, 0],
+#                                                                               [3, 3, 3], dtype="float32")
+#         spec.outputs.desired_attitude.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
+#                                                                                     [-32767, -32767, -32767],
+#                                                                                     [32767, 32767, 32767],
+#                                                                                     dtype="float32")
+#         spec.outputs.desired_thrust.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
+#                                                                                     [-32767, -32767, -32767],
+#                                                                                     [32767, 32767, 32767],
+#                                                                                     dtype="float32")
+#
+#     def initialize(self):
+#         # self.attitude_rate_pid_yaw = PID(kp=120, ki=16.7, kd=0, rate=self.rate)
+#         # self.attitude_rate_pid_pitch = PID(kp=250, ki=500, kd=2.5, rate=self.rate)
+#         # self.attitude_rate_pid_roll = PID(kp=250, ki=500, kd=2.5, rate=self.rate)
+#         pass
+#
+#     @eagerx.register.states()
+#     def reset(self):
+#         # self.attitude_rate_pid_yaw.reset()
+#         # self.attitude_rate_pid_pitch.reset()
+#         # self.attitude_rate_pid_roll.reset()
+#         pass
+#
+#     @eagerx.register.inputs(estimated_position=Float32MultiArray, estimated_velocity=Float32MultiArray, desired_position=Float32MultiArray)
+#     @eagerx.register.outputs(desired_attitude=Float32MultiArray, desired_thrust=Float32MultiArray)
+#     def callback(self, t_n: float, estimated_position: Msg):
+#         # current_attitude_rate = current_rate.msgs[-1].data
+#         # desired_attitude_rate = desired_rate.msgs[-1].data
+#         #
+#         # next_yaw_rate = self.attitude_rate_pid_yaw.next_action(current=current_attitude_rate[0],
+#         #                                                        desired=desired_attitude_rate[0])
+#         # next_pitch_rate = self.attitude_rate_pid_pitch.next_action(current=current_attitude_rate[1],
+#         #                                                            desired=desired_attitude_rate[1])
+#         # next_roll_rate = self.attitude_rate_pid_roll.next_action(current=current_attitude_rate[2],
+#         #                                                          desired=desired_attitude_rate[2])
+#         # next_action = np.array([next_roll_rate, next_pitch_rate, next_yaw_rate])
+#         # return dict(new_motor_control=Float32MultiArray(data=next_action))
+#         pass

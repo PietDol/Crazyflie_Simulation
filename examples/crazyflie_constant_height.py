@@ -35,7 +35,7 @@ if __name__ == "__main__":
     # Create solid object
     urdf_path = os.path.dirname(Crazyflie_Simulation.__file__) + "/solid/assets/"
     crazyflie = eagerx.Object.make(
-        "Crazyflie", "crazyflie", urdf=urdf_path + "cf2x.urdf", rate=rate, sensors=["pos", "orientation", "gyroscope", "accelerometer"], actuators=["pwm_input"],
+        "Crazyflie", "crazyflie", urdf=urdf_path + "cf2x.urdf", rate=rate, sensors=["pos", "vel", "orientation", "gyroscope", "accelerometer"], actuators=["pwm_input"],
         base_pos=[0, 0, 1], fixed_base=False,
         states=["pos", "vel", "orientation", "angular_vel"]
     )
@@ -144,6 +144,8 @@ if __name__ == "__main__":
         print(f"Episode {eps}")
         _, done = env.reset(), False
         while not done:
+
+
             action = env.action_space.sample()
             action["desired_attitude"][0] = 0
             action["desired_attitude"][1] = 0
