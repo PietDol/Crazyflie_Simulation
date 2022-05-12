@@ -4,6 +4,7 @@ from eagerx.utils.utils import Msg
 from std_msgs.msg import Float32, Float32MultiArray
 import numpy as np
 from Crazyflie_Simulation.solid.pid import PID
+import pybullet
 
 
 # todo: implement functions for the nodes
@@ -31,13 +32,15 @@ class AttitudePID(eagerx.Node):
         spec.config.outputs = ["new_attitude_rate"]
 
         # Add space converters
-        spec.inputs.desired_attitude.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray", [0, 0, 0],
-                                                                                  [3, 3, 3], dtype="float32")
-        spec.inputs.current_attitude.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray", [0, 0, 0],
-                                                                                  [3, 3, 3], dtype="float32")
+        spec.inputs.desired_attitude.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
+                                                                                  [-30, -30, -30],
+                                                                                  [30, 30, 30], dtype="float32")
+        spec.inputs.current_attitude.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
+                                                                                  [-1, -1, -1, -1],
+                                                                                  [1, 1, 1, 1], dtype="float32")
         spec.outputs.new_attitude_rate.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
-                                                                                    [0, 0, 0],
-                                                                                    [3, 3, 3], dtype="float32")
+                                                                                    [-90, -90, -90],
+                                                                                    [90, 90, 90], dtype="float32")
 
     def initialize(self):
         self.attitude_pid_yaw = PID(kp=6, ki=1, kd=0.35, rate=self.rate)
@@ -53,12 +56,24 @@ class AttitudePID(eagerx.Node):
     @eagerx.register.inputs(desired_attitude=Float32MultiArray, current_attitude=Float32MultiArray)
     @eagerx.register.outputs(new_attitude_rate=Float32MultiArray)
     def callback(self, t_n: float, desired_attitude: Msg, current_attitude: Msg):
+        # Current attitude is a quaternion
         current_attitude = current_attitude.msgs[-1].data
+        # Desired attitude is in degrees
         desired_attitude = desired_attitude.msgs[-1].data
+        # Current attitude from quaternion to euler angles (RPY)
+        current_attitude_euler = pybullet.getEulerFromQuaternion(current_attitude)
+        # Current attitude from radians to degrees
+        current_attitude_deg = np.zeros(3)
+        for idx, ang in enumerate(current_attitude_euler):
+            current_attitude_deg[idx] = ang * 180 / np.pi
 
-        next_yaw = self.attitude_pid_yaw.next_action(current=current_attitude[0], desired=desired_attitude[0])
-        next_pitch = self.attitude_pid_pitch.next_action(current=current_attitude[1], desired=desired_attitude[1])
-        next_roll = self.attitude_pid_roll.next_action(current=current_attitude[2], desired=desired_attitude[2])
+        print(f"Desired attitude: {desired_attitude[1]}")
+        print(f"Current attitude: {current_attitude_deg[1]}")
+
+        next_roll = self.attitude_pid_roll.next_action(current=current_attitude_deg[0], desired=desired_attitude[0])
+        # todo: (-) minus sign (necessary to make it work)
+        next_pitch = self.attitude_pid_pitch.next_action(current=-current_attitude_deg[1], desired=desired_attitude[1])
+        next_yaw = self.attitude_pid_yaw.next_action(current=current_attitude_deg[2], desired=desired_attitude[2])
         next_action = np.array([next_roll, next_pitch, next_yaw])
         return dict(new_attitude_rate=Float32MultiArray(data=next_action))
 
@@ -83,8 +98,9 @@ class AttitudeRatePID(eagerx.Node):
         spec.config.outputs = ["new_motor_control"]
 
         # Add space converters
-        spec.inputs.desired_rate.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray", [0, 0, 0],
-                                                                              [3, 3, 3], dtype="float32")
+        spec.inputs.desired_rate.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
+                                                                              [-90, -90, -90],
+                                                                              [90, 90, 90], dtype="float32")
         spec.inputs.current_rate.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
                                                                               [50000, 50000, 50000],
                                                                               [50000, 50000, 50000], dtype="float32")
@@ -107,16 +123,20 @@ class AttitudeRatePID(eagerx.Node):
     @eagerx.register.inputs(desired_rate=Float32MultiArray, current_rate=Float32MultiArray)
     @eagerx.register.outputs(new_motor_control=Float32MultiArray)
     def callback(self, t_n: float, desired_rate: Msg, current_rate: Msg):
-        current_attitude_rate = current_rate.msgs[-1].data
+        current_attitude_rate = current_rate.msgs[-1].data  # (vx, vy, vz) Roll, pitch, yaw
         desired_attitude_rate = desired_rate.msgs[-1].data
-
-        next_yaw_rate = self.attitude_rate_pid_yaw.next_action(current=current_attitude_rate[0],
-                                                               desired=desired_attitude_rate[0])
+        print(f"Current rate: {current_attitude_rate[1]}")
+        print(f"Desired rate: {desired_attitude_rate[1]}")
+        print("-" * 50)
+        next_roll_rate = self.attitude_rate_pid_roll.next_action(current=current_attitude_rate[0],
+                                                                 desired=desired_attitude_rate[0])
         next_pitch_rate = self.attitude_rate_pid_pitch.next_action(current=current_attitude_rate[1],
                                                                    desired=desired_attitude_rate[1])
-        next_roll_rate = self.attitude_rate_pid_roll.next_action(current=current_attitude_rate[2],
-                                                                 desired=desired_attitude_rate[2])
+        next_yaw_rate = self.attitude_rate_pid_yaw.next_action(current=current_attitude_rate[2],
+                                                               desired=desired_attitude_rate[2])
+
         next_action = np.array([next_roll_rate, next_pitch_rate, next_yaw_rate])
+        # print(next_action)
         return dict(new_motor_control=Float32MultiArray(data=next_action))
 
 
