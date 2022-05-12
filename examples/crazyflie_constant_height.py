@@ -7,6 +7,7 @@ import eagerx_pybullet  # Registers PybulletBridge # noqa # pylint: disable=unus
 import Crazyflie_Simulation  # Registers objects # noqa # pylint: disable=unused-import
 import eagerx_reality  # Registers bridge # noqa # pylint: disable=unused-import
 import Crazyflie_Simulation.solid.nodes
+from Crazyflie_Simulation.solid.pid import PID
 
 # Other
 import numpy as np
@@ -97,7 +98,7 @@ if __name__ == "__main__":
 
     # Define bridges
     # bridge = Bridge.make("RealBridge", rate=rate, sync=True, process=process.NEW_PROCESS)
-    bridge = eagerx.Bridge.make("PybulletBridge", rate=safe_rate, gui=True, egl=True, sync=True, real_time_factor=0.0,
+    bridge = eagerx.Bridge.make("PybulletBridge", rate=safe_rate, gui=True, egl=True, sync=True, real_time_factor=1.0,
                                 process=eagerx.process.ENVIRONMENT)  # delete process to run faster, this is useful for debugger
 
     # Define step function
@@ -129,7 +130,7 @@ if __name__ == "__main__":
         # Set orientation
         states["crazyflie/orientation"] = np.array([0, 0, 0, 1])
 
-        states["crazyflie/pos"] = np.array([0, 0, 0])
+        states["crazyflie/pos"] = np.array([0, 0, 1])
         return states
 
 
@@ -143,18 +144,23 @@ if __name__ == "__main__":
     for eps in range(5000):
         print(f"Episode {eps}")
         _, done = env.reset(), False
+        desired_altitude = 1
         while not done:
-
+            desired_thrust_pid = PID(kp=2000, ki=250, kd=50000000, rate=rate) #kp 2500 ki 0.2 kd 10000
 
             action = env.action_space.sample()
             action["desired_attitude"][0] = 0
             action["desired_attitude"][1] = 0
             action["desired_attitude"][2] = 0
-            action["desired_thrust"][0] = 35800
+            try:
+                action["desired_thrust"][0] = desired_thrust_pid.next_action(current=obs["position"][0][2], desired=desired_altitude)
+            except:
+                print("fucked") # debug
+                action["desired_thrust"][0] = desired_thrust_pid.next_action(current=0, desired=desired_altitude)
             obs, reward, done, info = env.step(action)
             rgb = env.render("rgb_array")
-            print("Orientation:")
-            print(obs["orientation"])
-            print("Position:")
-            print(obs["position"])
+            # print("Orientation:")
+            # print(obs["orientation"])
+            # print("Position:")
+            # print(obs["position"])
 
