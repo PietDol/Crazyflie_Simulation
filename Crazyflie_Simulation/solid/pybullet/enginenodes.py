@@ -165,6 +165,7 @@ class ForceController(EngineNode):
 
         return dict(action_applied=action_applied)
 
+
 # class LinkSensor(EngineNode):
 #     @staticmethod
 #     @register.spec("LinkSensor", EngineNode)
@@ -278,8 +279,8 @@ class ForceController(EngineNode):
 #         else:
 #             raise ValueError(f"Mode '{mode}' not recognized.")
 #         return cb
-#
-#
+
+
 # class JointController(EngineNode):
 #     @staticmethod
 #     @register.spec("JointController", EngineNode)

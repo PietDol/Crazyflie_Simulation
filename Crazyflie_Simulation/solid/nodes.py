@@ -67,8 +67,8 @@ class AttitudePID(eagerx.Node):
         for idx, ang in enumerate(current_attitude_euler):
             current_attitude_deg[idx] = ang * 180 / np.pi
 
-        print(f"Desired attitude: {desired_attitude[1]}")
-        print(f"Current attitude: {current_attitude_deg[1]}")
+        # print(f"Desired attitude: {desired_attitude[1]}")
+        # print(f"Current attitude: {current_attitude_deg[1]}")
 
         next_roll = self.attitude_pid_roll.next_action(current=current_attitude_deg[0], desired=desired_attitude[0])
         # todo: (-) minus sign (necessary to make it work)
@@ -125,9 +125,9 @@ class AttitudeRatePID(eagerx.Node):
     def callback(self, t_n: float, desired_rate: Msg, current_rate: Msg):
         current_attitude_rate = current_rate.msgs[-1].data  # (vx, vy, vz) Roll, pitch, yaw
         desired_attitude_rate = desired_rate.msgs[-1].data
-        print(f"Current rate: {current_attitude_rate[1]}")
-        print(f"Desired rate: {desired_attitude_rate[1]}")
-        print("-" * 50)
+        # print(f"Current rate: {current_attitude_rate[1]}")
+        # print(f"Desired rate: {desired_attitude_rate[1]}")
+        # print("-" * 50)
         next_roll_rate = self.attitude_rate_pid_roll.next_action(current=current_attitude_rate[0],
                                                                  desired=desired_attitude_rate[0])
         next_pitch_rate = self.attitude_rate_pid_pitch.next_action(current=current_attitude_rate[1],

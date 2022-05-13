@@ -26,7 +26,7 @@ if __name__ == "__main__":
 
     # Define rate
     real_reset = False
-    rate = 500
+    rate = 500 #220?
     safe_rate = 500
     max_steps = 300
 
@@ -94,12 +94,12 @@ if __name__ == "__main__":
         # Connect joint output to safety filter
 
     # Show in the gui
-    # graph.gui()
+    graph.gui()
 
     # Define bridges
     # bridge = Bridge.make("RealBridge", rate=rate, sync=True, process=process.NEW_PROCESS)
-    bridge = eagerx.Bridge.make("PybulletBridge", rate=safe_rate, gui=True, egl=True, sync=True, real_time_factor=1.0,
-                                process=eagerx.process.ENVIRONMENT)  # delete process to run faster, this is useful for debugger
+    bridge = eagerx.Bridge.make("PybulletBridge", rate=safe_rate, gui=True, egl=True, sync=True, real_time_factor=0.0)
+                                # process=eagerx.process.ENVIRONMENT)  # delete process to run faster, this is useful for debugger
 
     # Define step function
     def step_fn(prev_obs, obs, action, steps):
@@ -144,18 +144,18 @@ if __name__ == "__main__":
     for eps in range(5000):
         print(f"Episode {eps}")
         _, done = env.reset(), False
-        desired_altitude = 1.2
+        desired_altitude = 2
         while not done:
-            desired_thrust_pid = PID(kp=100000, ki=500, kd=250, rate=rate) #kp 2500 ki 0.2 kd 10000
+            desired_thrust_pid = PID(kp=10000, ki=50, kd=2500000, rate=rate) #kp 2500 ki 0.2 kd 10000
 
             action = env.action_space.sample()
             action["desired_attitude"][0] = 0           # Roll
-            action["desired_attitude"][1] = 10           # Pitch
+            action["desired_attitude"][1] = 0           # Pitch
             action["desired_attitude"][2] = 0           # Yaw
             try:
                 action["desired_thrust"][0] = desired_thrust_pid.next_action(current=obs["position"][0][2], desired=desired_altitude)
             except:
-                print("fucked") # debug
+                # print("fucked") # debug
                 action["desired_thrust"][0] = desired_thrust_pid.next_action(current=0, desired=desired_altitude)
             # action["desired_thrust"][0] = 36100
             obs, reward, done, info = env.step(action)
