@@ -209,6 +209,8 @@ class Crazyflie(Object):
         # graph.is_valid(plot=True)
 
         # graph.gui()
+
+
 class Solid(Object):
     entity_id = "Solid"
 

@@ -94,7 +94,7 @@ if __name__ == "__main__":
         # Connect joint output to safety filter
 
     # Show in the gui
-    graph.gui()
+    # graph.gui()
 
     # Define bridges
     # bridge = Bridge.make("RealBridge", rate=rate, sync=True, process=process.NEW_PROCESS)
