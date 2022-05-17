@@ -2,6 +2,7 @@
 from std_msgs.msg import Float32MultiArray, Float32
 
 # EAGERx IMPORTS
+from eagerx_ode.engine import OdeEngine
 from eagerx_pybullet.engine import PybulletEngine
 from eagerx import Object, EngineNode, SpaceConverter, EngineState
 from eagerx.core.specs import ObjectSpec
@@ -208,7 +209,10 @@ class Crazyflie(Object):
         # Check graph validity (commented out)
         # graph.is_valid(plot=True)
 
-        # graph.gui()
+    @staticmethod
+    @register.engine(entity_id, OdeEngine)
+    def ode_engine(spec: ObjectSpec, graph: EngineGraph):
+        pass
 
 
 class Solid(Object):
