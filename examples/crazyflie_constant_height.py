@@ -3,9 +3,9 @@ from eagerx.wrappers.flatten import Flatten
 from eagerx.core.env import EagerxEnv
 from eagerx.core.graph import Graph
 import eagerx.nodes  # Registers butterworth_filter # noqa # pylint: disable=unused-import
-import eagerx_pybullet  # Registers PybulletBridge # noqa # pylint: disable=unused-import
+import eagerx_pybullet  # Registers PybulletEngine # noqa # pylint: disable=unused-import
 import Crazyflie_Simulation  # Registers objects # noqa # pylint: disable=unused-import
-import eagerx_reality  # Registers bridge # noqa # pylint: disable=unused-import
+import eagerx_reality  # Registers Engine # noqa # pylint: disable=unused-import
 import Crazyflie_Simulation.solid.nodes
 from Crazyflie_Simulation.solid.pid import PID
 
@@ -96,9 +96,9 @@ if __name__ == "__main__":
     # Show in the gui
     # graph.gui()
 
-    # Define bridges
-    # bridge = Bridge.make("RealBridge", rate=rate, sync=True, process=process.NEW_PROCESS)
-    bridge = eagerx.Engine.make("PybulletEngine", rate=safe_rate, gui=True, egl=True, sync=True, real_time_factor=0.0)
+    # Define engines
+    # engine = Engine.make("RealEngine", rate=rate, sync=True, process=process.NEW_PROCESS)
+    engine = eagerx.Engine.make("PybulletEngine", rate=safe_rate, gui=True, egl=True, sync=True, real_time_factor=0.0)
                                 # process=eagerx.process.ENVIRONMENT)  # delete process to run faster, this is useful for debugger
 
     # Define step function
@@ -135,7 +135,7 @@ if __name__ == "__main__":
 
 
     # Initialize Environment
-    env = EagerxEnv(name="rx", rate=rate, graph=graph, engine=bridge, step_fn=step_fn, reset_fn=reset_fn, exclude=[])
+    env = EagerxEnv(name="rx", rate=rate, graph=graph, engine=engine, step_fn=step_fn, reset_fn=reset_fn, exclude=[])
 
     # First train in simulation
     env.render("human")

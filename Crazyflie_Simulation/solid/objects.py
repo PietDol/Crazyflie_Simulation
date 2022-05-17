@@ -155,13 +155,13 @@ class Crazyflie(Object):
 
     @staticmethod
     @register.engine(entity_id, PybulletEngine)
-    def pybullet_bridge(spec: ObjectSpec, graph: EngineGraph):
+    def pybullet_engine(spec: ObjectSpec, graph: EngineGraph):
         """Engine-specific implementation (Pybullet) of the object."""
-        # Import any object specific entities for this bridge
+        # Import any object specific entities for this engine
         import Crazyflie_Simulation.solid.pybullet  # noqa # pylint: disable=unused-import
         import eagerx_pybullet  # noqa # pylint: disable=unused-import
 
-        # Set object arguments (as registered per register.bridge_params(..) above the bridge.add_object(...) method.
+        # Set object arguments (as registered per register.engine_params(..) above the engine.add_object(...) method.
         spec.PybulletEngine.urdf = spec.config.urdf
         spec.PybulletEngine.basePosition = spec.config.base_pos
         spec.PybulletEngine.baseOrientation = spec.config.base_or
@@ -346,13 +346,13 @@ class Solid(Object):
 
     @staticmethod
     @register.engine(entity_id, PybulletEngine)
-    def pybullet_bridge(spec: ObjectSpec, graph: EngineGraph):
+    def pybullet_engine(spec: ObjectSpec, graph: EngineGraph):
         """Engine-specific implementation (Pybullet) of the object."""
-        # Import any object specific entities for this bridge
+        # Import any object specific entities for this engine
         import Crazyflie_Simulation.solid.pybullet  # noqa # pylint: disable=unused-import
         import eagerx_pybullet  # noqa # pylint: disable=unused-import
 
-        # Set object arguments (as registered per register.bridge_params(..) above the bridge.add_object(...) method.
+        # Set object arguments (as registered per register.engine_params(..) above the engine.add_object(...) method.
         spec.PybulletEngine.urdf = spec.config.urdf
         spec.PybulletEngine.basePosition = spec.config.base_pos
         spec.PybulletEngine.baseOrientation = spec.config.base_or
