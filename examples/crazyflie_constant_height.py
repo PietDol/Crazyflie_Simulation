@@ -3,9 +3,9 @@ from eagerx.wrappers.flatten import Flatten
 from eagerx.core.env import EagerxEnv
 from eagerx.core.graph import Graph
 import eagerx.nodes  # Registers butterworth_filter # noqa # pylint: disable=unused-import
-import eagerx_pybullet  # Registers PybulletBridge # noqa # pylint: disable=unused-import
+import eagerx_pybullet  # Registers PybulletEngine # noqa # pylint: disable=unused-import
 import Crazyflie_Simulation  # Registers objects # noqa # pylint: disable=unused-import
-import eagerx_reality  # Registers bridge # noqa # pylint: disable=unused-import
+import eagerx_reality  # Registers Engine # noqa # pylint: disable=unused-import
 import Crazyflie_Simulation.solid.nodes
 from Crazyflie_Simulation.solid.pid import PID
 
@@ -26,7 +26,7 @@ if __name__ == "__main__":
 
     # Define rate
     real_reset = False
-    rate = 500
+    rate = 500 #220?
     safe_rate = 500
     max_steps = 300
 
@@ -96,10 +96,10 @@ if __name__ == "__main__":
     # Show in the gui
     # graph.gui()
 
-    # Define bridges
-    # bridge = Bridge.make("RealBridge", rate=rate, sync=True, process=process.NEW_PROCESS)
-    bridge = eagerx.Bridge.make("PybulletBridge", rate=safe_rate, gui=True, egl=True, sync=True, real_time_factor=1.0,
-                                process=eagerx.process.ENVIRONMENT)  # delete process to run faster, this is useful for debugger
+    # Define engines
+    # engine = Engine.make("RealEngine", rate=rate, sync=True, process=process.NEW_PROCESS)
+    engine = eagerx.Engine.make("PybulletEngine", rate=safe_rate, gui=True, egl=True, sync=True, real_time_factor=0.0)
+                                # process=eagerx.process.ENVIRONMENT)  # delete process to run faster, this is useful for debugger
 
     # Define step function
     def step_fn(prev_obs, obs, action, steps):
@@ -135,7 +135,7 @@ if __name__ == "__main__":
 
 
     # Initialize Environment
-    env = EagerxEnv(name="rx", rate=rate, graph=graph, bridge=bridge, step_fn=step_fn, reset_fn=reset_fn, exclude=[])
+    env = EagerxEnv(name="rx", rate=rate, graph=graph, engine=engine, step_fn=step_fn, reset_fn=reset_fn, exclude=[])
 
     # First train in simulation
     env.render("human")
@@ -144,18 +144,18 @@ if __name__ == "__main__":
     for eps in range(5000):
         print(f"Episode {eps}")
         _, done = env.reset(), False
-        desired_altitude = 1.2
+        desired_altitude = 2
         while not done:
-            desired_thrust_pid = PID(kp=100000, ki=500, kd=250, rate=rate) #kp 2500 ki 0.2 kd 10000
+            desired_thrust_pid = PID(kp=10000, ki=50, kd=2500000, rate=rate) #kp 2500 ki 0.2 kd 10000
 
             action = env.action_space.sample()
             action["desired_attitude"][0] = 0           # Roll
-            action["desired_attitude"][1] = 10           # Pitch
+            action["desired_attitude"][1] = 0           # Pitch
             action["desired_attitude"][2] = 0           # Yaw
             try:
                 action["desired_thrust"][0] = desired_thrust_pid.next_action(current=obs["position"][0][2], desired=desired_altitude)
             except:
-                print("fucked") # debug
+                # print("fucked") # debug
                 action["desired_thrust"][0] = desired_thrust_pid.next_action(current=0, desired=desired_altitude)
             # action["desired_thrust"][0] = 36100
             obs, reward, done, info = env.step(action)

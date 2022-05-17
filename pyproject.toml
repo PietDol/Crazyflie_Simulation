@@ -18,6 +18,7 @@ modern_robotics = "^1.1.0"
 urdf-parser-py = "^0.0.4"
 xacro = "^1.13.3"
 stable-baselines3 = {extras = ["extra"], version = "^1.5.0"}
+eagerx-ode = "^0.1.11"
 
 [tool.poetry.dev-dependencies]
 black = "^22.3.0"
