@@ -97,6 +97,12 @@ class ForceController(EngineNode):
                 for idx, pwm in enumerate(pwm):
                     forces[idx] = (2.130295e-11) * (pwm) ** 2 + (1.032633e-6) * pwm + 5.484560e-4
                 total_force = np.array([0, 0, np.sum(forces)])
+
+                # this acceleration differs from acceleration calculated in Accelerometer. Only works when flying straight up
+                # accel = (total_force/0.027) + np.array([0, 0, -9.81]) # debug
+                # print("="*50)
+                # print("accel from applied force", accel) # debug
+
                 # print(f"Force: {total_force}")  # debug
                 p.applyExternalForce(
                     objectUniqueId=objectUniqueId,
@@ -165,6 +171,69 @@ class ForceController(EngineNode):
 
         return dict(action_applied=action_applied)
 
+
+class AccelerometerSensor(EngineNode):
+    @staticmethod
+    @register.spec("AccelerometerSensor", EngineNode)
+    def spec(
+            spec: NodeSpec,
+            name: str,
+            rate: float,
+            process: Optional[int] = p.ENGINE,
+            color: Optional[str] = "cyan",
+    ):
+        """A spec to create a LinkSensor node that provides sensor measurements for the specified set of links.
+
+        :param spec: Holds the desired configuration.
+        :param name: User specified node name.
+        :param rate: Rate (Hz) at which the callback is called.
+        :param links: List of links to be included in the measurements. Its order determines the ordering of the measurements.
+        :param process: Process in which this node is launched. See :class:`~eagerx.core.constants.process` for all options.
+        :param color: Specifies the color of logged messages & node color in the GUI.
+        :param mode: Available: `position`, `orientation`, `velocity`, and `angular_vel`
+        :return: NodeSpec
+        """
+        # Performs all the steps to fill-in the params with registered info about all functions.
+        spec.initialize(AccelerometerSensor)
+
+        # Modify default node params
+        spec.config.name = name
+        spec.config.rate = rate
+        spec.config.process = process
+        spec.config.inputs = ["tick", "input_force"]
+        spec.config.outputs = ["obs"]
+
+    def initialize(self):
+        pass
+
+    @register.states()
+    def reset(self):
+        """This link sensor is stateless, so nothing happens here."""
+        pass
+
+    @register.inputs(tick=UInt64, input_force=Float32MultiArray)
+    @register.outputs(obs=Float32MultiArray)
+    def callback(self, t_n: float, input_force: Msg, tick: Optional[Msg] = None):
+        """Produces a link sensor measurement called `obs`.
+
+        The measurement is published at the specified rate * real_time_factor.
+
+        Input `tick` ensures that this node is I/O synchronized with the simulator."""
+        # get last and current velocity
+        last = np.array(input_force.msgs[0].data)
+        # print("last", last) # debug
+        try:
+            current = np.array(input_force.msgs[1].data)
+        except:
+            current = np.array([0, 0, 0])
+        # print("current", current) # debug
+
+        # calculate acceleration dy/dt
+        # todo: This acceleration is not exactly the same as calculated from the applied force in external_force
+        diff = (current - last) / (1 / self.rate)
+        print("acceleration", diff)
+        print("=" * 50)
+        return dict(obs=Float32MultiArray(data=diff))
 
 # class LinkSensor(EngineNode):
 #     @staticmethod

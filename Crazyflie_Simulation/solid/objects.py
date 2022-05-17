@@ -186,7 +186,7 @@ class Crazyflie(Object):
             "LinkSensor", "gyroscope", rate=spec.sensors.gyroscope.rate, process=2, mode="angular_vel"
         )
         accelerometer = EngineNode.make(
-            "LinkSensor", "accelerometer", rate=spec.sensors.accelerometer.rate, process=2, mode="angular_vel"
+            "AccelerometerSensor", "accelerometer", rate=spec.sensors.accelerometer.rate, process=2
         )
         # Create actuator engine nodes
         # Rate=None, but we will connect it to an actuator (thus will use the rate set in the agnostic specification)
@@ -196,6 +196,8 @@ class Crazyflie(Object):
         )
         # Connect all engine nodes
         graph.add([pos, vel, orientation, gyroscope, accelerometer, external_force])
+        # graph.connect(source=external_force.outputs.action_applied, target=accelerometer.inputs.input_force, skip=True)
+        graph.connect(source=vel.outputs.obs, target=accelerometer.inputs.input_force, window=2)
         graph.connect(source=pos.outputs.obs, sensor="pos")
         graph.connect(source=vel.outputs.obs, sensor="vel")
         graph.connect(source=orientation.outputs.obs, sensor="orientation")
