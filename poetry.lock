@@ -125,7 +125,7 @@ uvloop = ["uvloop (>=0.15.2)"]
 
 [[package]]
 name = "cachetools"
-version = "5.0.0"
+version = "5.1.0"
 description = "Extensible memoizing collections and decorators"
 category = "main"
 optional = false
@@ -241,7 +241,7 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*"
 
 [[package]]
 name = "eagerx"
-version = "0.1.22"
+version = "0.1.23"
 description = "Engine Angostic Gym Environments for Robotics"
 category = "main"
 optional = false
@@ -268,52 +268,52 @@ termcolor = ">=1.1.0,<2.0.0"
 
 [[package]]
 name = "eagerx-gui"
-version = "0.2.4"
+version = "0.2.5"
 description = "GUI to visualise graphs in EAGERx."
 category = "main"
 optional = false
 python-versions = ">=3.8,<4.0"
 
 [package.dependencies]
-eagerx = ">=0.1.17,<0.2.0"
+eagerx = ">=0.1.23,<0.2.0"
 opencv-python = ">=4.5,<5.0"
 PyQt6 = ">=6.2.3,<7.0.0"
 pyqtgraph = ">=0.12.4,<0.13.0"
 
 [[package]]
 name = "eagerx-ode"
-version = "0.1.11"
-description = "Bridge (with corresponding nodes) that uses arbitrary ODEs to simulate objects in EAGERx."
+version = "0.1.12"
+description = "Engine (with corresponding nodes) that uses arbitrary ODEs to simulate objects in EAGERx."
 category = "main"
 optional = false
 python-versions = ">=3.6.2,<4.0.0"
 
 [package.dependencies]
-eagerx = ">=0.1.17,<0.2.0"
+eagerx = ">=0.1.23,<0.2.0"
 scipy = ">=1.5.4,<2.0.0"
 
 [[package]]
 name = "eagerx-pybullet"
-version = "0.1.7"
+version = "0.1.8"
 description = "This repository contains the eagerx_pybllet package, which allows to simulate systems with EAGERx using pybullet."
 category = "main"
 optional = false
 python-versions = ">=3.6.2,<4.0.0"
 
 [package.dependencies]
-eagerx = ">=0.1.17,<0.2.0"
+eagerx = ">=0.1.23,<0.2.0"
 pybullet = ">=3.2.1,<4.0.0"
 
 [[package]]
 name = "eagerx-reality"
-version = "0.1.6"
-description = "Simple bridge that can be used in reality together with several useful nodes."
+version = "0.1.7"
+description = "Simple engine that can be used in reality together with several useful nodes."
 category = "main"
 optional = false
 python-versions = ">=3.6.2,<4.0.0"
 
 [package.dependencies]
-eagerx = ">=0.1.17,<0.2.0"
+eagerx = ">=0.1.23,<0.2.0"
 
 [[package]]
 name = "flake8"
@@ -447,7 +447,7 @@ python-versions = ">=3.5"
 
 [[package]]
 name = "imageio"
-version = "2.19.1"
+version = "2.19.2"
 description = "Library for reading and writing a wide range of image, video, scientific, and volumetric data formats."
 category = "main"
 optional = false
@@ -1516,8 +1516,8 @@ black = [
     {file = "black-22.3.0.tar.gz", hash = "sha256:35020b8886c022ced9282b51b5a875b6d1ab0c387b31a065b84db7c33085ca79"},
 ]
 cachetools = [
-    {file = "cachetools-5.0.0-py3-none-any.whl", hash = "sha256:8fecd4203a38af17928be7b90689d8083603073622229ca7077b72d8e5a976e4"},
-    {file = "cachetools-5.0.0.tar.gz", hash = "sha256:486471dfa8799eb7ec503a8059e263db000cdda20075ce5e48903087f79d5fd6"},
+    {file = "cachetools-5.1.0-py3-none-any.whl", hash = "sha256:4ebbd38701cdfd3603d1f751d851ed248ab4570929f2d8a7ce69e30c420b141c"},
+    {file = "cachetools-5.1.0.tar.gz", hash = "sha256:8b3b8fa53f564762e5b221e9896798951e7f915513abf2ba072ce0f07f3f5a98"},
 ]
 catkin-pkg = [
     {file = "catkin_pkg-0.5.0-py3-none-any.whl", hash = "sha256:7dabab73f77ef64ecb23a0e7dc55e1f9dc0bd9ca7aeb83c94647edb6ff626c74"},
@@ -1603,24 +1603,24 @@ docutils = [
     {file = "docutils-0.17.1.tar.gz", hash = "sha256:686577d2e4c32380bb50cbb22f575ed742d58168cee37e99117a854bcd88f125"},
 ]
 eagerx = [
-    {file = "eagerx-0.1.22-py3-none-any.whl", hash = "sha256:5acb38beaf383a8d3d35129183f6b27d321970fc4ff3e0a6c55d2f6bd0cb0605"},
-    {file = "eagerx-0.1.22.tar.gz", hash = "sha256:70333df071e1b201598755736a97ca6c0848eee3f41b5e5a97d596e8f2e5560e"},
+    {file = "eagerx-0.1.23-py3-none-any.whl", hash = "sha256:da9d0c5d786704dddc235ec28cecc2c98a78d6e939947276dbecc0181acc3b73"},
+    {file = "eagerx-0.1.23.tar.gz", hash = "sha256:3e32c65f99eb53abc80b40541a38834625df3cbb330f6000792f2d2436f7f893"},
 ]
 eagerx-gui = [
-    {file = "eagerx_gui-0.2.4-py3-none-any.whl", hash = "sha256:a52e94ccd4b480be16810dd919eb97b94a40636a7e4b1e2a5ddd4b61bbfa1f54"},
-    {file = "eagerx_gui-0.2.4.tar.gz", hash = "sha256:6400ed37a2a74746e77648b6171974030000f4e2a000ccdb8ecd1b457ebaaafe"},
+    {file = "eagerx_gui-0.2.5-py3-none-any.whl", hash = "sha256:4494fba37839ca5d979f06c8edc2528d6a7c283faff4182a2b3f7a8586279413"},
+    {file = "eagerx_gui-0.2.5.tar.gz", hash = "sha256:616211205b453ce1fd1f068b8cc3877ac5ff0223677bc2d5a549f92df3ecff89"},
 ]
 eagerx-ode = [
-    {file = "eagerx_ode-0.1.11-py3-none-any.whl", hash = "sha256:a63eabe6f92ded4e7459c07a7abe726890d992d395039f48e7bd7fda1c14da86"},
-    {file = "eagerx_ode-0.1.11.tar.gz", hash = "sha256:0c2db0c1d6e4387bb7b4a73bc4ffd9a47a6afa7cbd039f3da01c636ea9bb9f47"},
+    {file = "eagerx_ode-0.1.12-py3-none-any.whl", hash = "sha256:278a9a1c3a9bc0953fc39948009afcac830053344bd9d9ecc41a865bca181fa4"},
+    {file = "eagerx_ode-0.1.12.tar.gz", hash = "sha256:ee1cc851885074864c52f06629e1c6822c25e011a2edf390f5f2ff7d8a0d0fce"},
 ]
 eagerx-pybullet = [
-    {file = "eagerx_pybullet-0.1.7-py3-none-any.whl", hash = "sha256:2462aa78abd3e9b05e3d3e1a69657dc28873901ffa8adfc0fc793d63dd984cbd"},
-    {file = "eagerx_pybullet-0.1.7.tar.gz", hash = "sha256:b0676cfe79538922cc56f3acde71daf008515d5c1e57f3c63e4bc4e9969b264b"},
+    {file = "eagerx_pybullet-0.1.8-py3-none-any.whl", hash = "sha256:46205149d24716a2159e10543a3ba50f661980db18a730baaf14a195376fc3e9"},
+    {file = "eagerx_pybullet-0.1.8.tar.gz", hash = "sha256:fb242458d41e1e8d1ee1e0c641574a33e282e74a59d6e84fc166ae59bdd3991f"},
 ]
 eagerx-reality = [
-    {file = "eagerx_reality-0.1.6-py3-none-any.whl", hash = "sha256:5b960fefcf9cf18702017693abb6798219d518fa2ab1683f3ca41714587224a9"},
-    {file = "eagerx_reality-0.1.6.tar.gz", hash = "sha256:68f3ca96a6c33cb7fc26d6505a62b0fc625ac91899759e3cbca92428c4ff12b0"},
+    {file = "eagerx_reality-0.1.7-py3-none-any.whl", hash = "sha256:2e33a545242bc8a18046217bc90aadd3c7c932cb143b802eeb2dea9b4b261bd2"},
+    {file = "eagerx_reality-0.1.7.tar.gz", hash = "sha256:7bfe33f364ae24c26f55b3081ef62434d1b7cb23dca74e300aad1b6e09c62ac1"},
 ]
 flake8 = [
     {file = "flake8-4.0.1-py2.py3-none-any.whl", hash = "sha256:479b1304f72536a55948cb40a32dce8bb0ffe3501e26eaf292c7e60eb5e0428d"},
@@ -1706,8 +1706,8 @@ idna = [
     {file = "idna-3.3.tar.gz", hash = "sha256:9d643ff0a55b762d5cdb124b8eaa99c66322e2157b69160bc32796e824360e6d"},
 ]
 imageio = [
-    {file = "imageio-2.19.1-py3-none-any.whl", hash = "sha256:cd5b6ac2f4111c76f08d33b86a4cb987520f1d6ec2183e8a2656ace8d026a38e"},
-    {file = "imageio-2.19.1.tar.gz", hash = "sha256:d63600626b80ebe1ec9614c33434879c754dea328717f4e2cebe88f156fa1a9c"},
+    {file = "imageio-2.19.2-py3-none-any.whl", hash = "sha256:2c01611a90ac87119833946a41af53e55d68ec68e25e2780e6c3ce665100d006"},
+    {file = "imageio-2.19.2.tar.gz", hash = "sha256:46e1e74128837d2a1ebc87476b7f73978b69a128fa238bc989b625a9819bd9b3"},
 ]
 imagesize = [
     {file = "imagesize-1.3.0-py2.py3-none-any.whl", hash = "sha256:1db2f82529e53c3e929e8926a1fa9235aa82d0bd0c580359c67ec31b2fddaa8c"},

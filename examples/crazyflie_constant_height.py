@@ -98,7 +98,7 @@ if __name__ == "__main__":
 
     # Define bridges
     # bridge = Bridge.make("RealBridge", rate=rate, sync=True, process=process.NEW_PROCESS)
-    bridge = eagerx.Bridge.make("PybulletBridge", rate=safe_rate, gui=True, egl=True, sync=True, real_time_factor=0.0)
+    bridge = eagerx.Engine.make("PybulletEngine", rate=safe_rate, gui=True, egl=True, sync=True, real_time_factor=0.0)
                                 # process=eagerx.process.ENVIRONMENT)  # delete process to run faster, this is useful for debugger
 
     # Define step function
@@ -135,7 +135,7 @@ if __name__ == "__main__":
 
 
     # Initialize Environment
-    env = EagerxEnv(name="rx", rate=rate, graph=graph, bridge=bridge, step_fn=step_fn, reset_fn=reset_fn, exclude=[])
+    env = EagerxEnv(name="rx", rate=rate, graph=graph, engine=bridge, step_fn=step_fn, reset_fn=reset_fn, exclude=[])
 
     # First train in simulation
     env.render("human")
