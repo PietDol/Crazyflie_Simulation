@@ -70,6 +70,12 @@ if __name__ == "__main__":
     )
     graph.add(state_estimator)
 
+    # Add picture making node
+    make_picture = eagerx.Node.make(
+        "MakePicture", "make_picture", rate
+    )
+    graph.add(make_picture)
+
     # Connecting observations
     graph.connect(source=crazyflie.sensors.orientation, observation="orientation")
     graph.connect(source=crazyflie.sensors.pos, observation="position")
@@ -86,6 +92,11 @@ if __name__ == "__main__":
     graph.connect(source=crazyflie.sensors.accelerometer, target=state_estimator.inputs.acceleration)
     graph.connect(source=crazyflie.sensors.orientation, target=state_estimator.inputs.orientation)
     graph.connect(source=state_estimator.outputs.orientation, target=attitude_pid.inputs.current_attitude)
+    graph.connect(source=crazyflie.sensors.orientation, target=make_picture.inputs.orientation)
+    graph.connect(source=crazyflie.sensors.pos, target=make_picture.inputs.position)
+
+
+    graph.render(source=make_picture.outputs.image, rate=rate)
 
     # Create reset node
     if real_reset:
@@ -138,7 +149,7 @@ if __name__ == "__main__":
     env = EagerxEnv(name="rx", rate=rate, graph=graph, engine=engine, step_fn=step_fn, reset_fn=reset_fn, exclude=[])
 
     # First train in simulation
-    env.render("human")
+    # env.render("human")
 
     # Evaluate
     for eps in range(5000):
