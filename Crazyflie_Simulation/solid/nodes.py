@@ -320,8 +320,10 @@ class MakePicture(eagerx.Node):
         width = 880
         offset = 40 # offset of the picture from the sides
         pos_x, pos_y, pos_z = position.msgs[-1].data[0], position.msgs[-1].data[1], position.msgs[-1].data[2]
-
-        euler_orientation = pybullet.getEulerFromQuaternion(orientation.msgs[-1].data)
+        if len(orientation.msgs[-1].data) == 4:
+            euler_orientation = pybullet.getEulerFromQuaternion(orientation.msgs[-1].data)
+        else:
+            euler_orientation = orientation.msgs[-1].data
         roll, pitch, yaw = euler_orientation[0], euler_orientation[1], euler_orientation[2]
 
         img = np.zeros((height, width, 3), np.uint8)

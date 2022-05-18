@@ -33,7 +33,7 @@ if __name__ == "__main__":
     # Initialize empty graph
     graph = Graph.create()
 
-    engine_mode = "Pybullet"
+    engine_mode = "Ode"
     # Create crazyflie object
     urdf_path = os.path.dirname(Crazyflie_Simulation.__file__) + "/solid/assets/"
 
@@ -70,25 +70,15 @@ if __name__ == "__main__":
         )
         graph.add(power_distribution)
 
-    # Add picture making node
-    make_picture = eagerx.Node.make(
-        "MakePicture", "make_picture", rate
-    )
-    graph.add(make_picture)
         # Add state estimator
         state_estimator = eagerx.Node.make(
             "StateEstimator", "state_estimator", rate=rate, n=3
         )
         graph.add(state_estimator)
 
-    graph.connect(source=crazyflie.sensors.orientation, target=make_picture.inputs.orientation)
-    graph.connect(source=crazyflie.sensors.pos, target=make_picture.inputs.position)
         # Connecting observations
         graph.connect(source=crazyflie.sensors.orientation, observation="orientation")
         graph.connect(source=crazyflie.sensors.pos, observation="position")
-
-
-    graph.render(source=make_picture.outputs.image, rate=rate)
 
         # Connecting actions
         # graph.connect(action="external_force", target=solid.actuators.external_force)
@@ -126,6 +116,16 @@ if __name__ == "__main__":
     else:
         raise "Wrong engine_mode selected. Please choose between Pybullet and Ode"
 
+    # Add picture making node
+    make_picture = eagerx.Node.make(
+        "MakePicture", "make_picture", rate
+    )
+    graph.add(make_picture)
+
+    graph.connect(source=crazyflie.sensors.orientation, target=make_picture.inputs.orientation)
+    graph.connect(source=crazyflie.sensors.pos, target=make_picture.inputs.position)
+
+    graph.render(source=make_picture.outputs.image, rate=rate)
     # Create reset node
     if real_reset:
         # Connect target state we are resetting
@@ -195,7 +195,7 @@ if __name__ == "__main__":
     for eps in range(5000):
         print(f"Episode {eps}")
         _, done = env.reset(), False
-        desired_altitude = 1
+        desired_altitude = 2
         while not done:
             desired_thrust_pid = PID(kp=10000, ki=50, kd=2500000, rate=rate)  # kp 2500 ki 0.2 kd 10000
 
@@ -208,6 +208,7 @@ if __name__ == "__main__":
                                                                              desired=desired_altitude)
             except:
                 action["desired_thrust"][0] = desired_thrust_pid.next_action(current=0, desired=desired_altitude)
+            action["desired_thrust"][0] = np.clip(action["desired_thrust"][0], 10000, 60000)
             # action["desired_thrust"][0] = 36100
             obs, reward, done, info = env.step(action)
             rgb = env.render("rgb_array")
