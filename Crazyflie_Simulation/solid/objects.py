@@ -2,6 +2,7 @@
 from std_msgs.msg import Float32MultiArray, Float32
 
 # EAGERx IMPORTS
+from eagerx_ode.engine import OdeEngine
 from eagerx_pybullet.engine import PybulletEngine
 from eagerx import Object, EngineNode, SpaceConverter, EngineState
 from eagerx.core.specs import ObjectSpec
@@ -15,7 +16,7 @@ class Crazyflie(Object):
     @staticmethod
     @register.sensors(
         pos=Float32MultiArray, vel=Float32MultiArray, orientation=Float32MultiArray, gyroscope=Float32MultiArray,
-        accelerometer=Float32MultiArray
+        accelerometer=Float32MultiArray,
     )
     @register.engine_states(
         pos=Float32MultiArray,
@@ -23,8 +24,10 @@ class Crazyflie(Object):
         orientation=Float32MultiArray,
         angular_vel=Float32MultiArray,
         lateral_friction=Float32,
+        model_state=Float32MultiArray,
     )
-    @register.actuators(pwm_input=Float32MultiArray)
+    @register.actuators(pwm_input=Float32MultiArray, commanded_thrust=Float32MultiArray,
+                        commanded_attitude=Float32MultiArray)
     @register.config(urdf=None, fixed_base=True, self_collision=True, base_pos=[0, 0, 0], base_or=[0, 0, 0, 1])
     def agnostic(spec: ObjectSpec, rate):
         """Agnostic definition of the Solid"""
@@ -108,13 +111,41 @@ class Crazyflie(Object):
             high=0.5,
         )
 
+        # Model state
+        # States are: [x, y, z, x_dot, y_dot, z_dot, phi, theta, thrust_state]
+        spec.states.model_state.space_converter = SpaceConverter.make(
+            "Space_Float32MultiArray",
+            dtype="float32",
+            low=[-1000, 1000, 0, -100, -100, -100, -30, -30, -100000],
+            high=[1000, 1000, 1000, 100, 100, 100, 30, 30, 100000],
+        )
+
         # Actuators
+        # PWM input
         spec.actuators.pwm_input.rate = rate
         spec.actuators.pwm_input.space_converter = SpaceConverter.make(
             "Space_Float32MultiArray",
             dtype="float32",
             low=[0.2, 0.2, 0],
             high=[0.2, 0.2, 0],
+        )
+
+        # Desired thrust
+        spec.actuators.commanded_thrust.rate = rate
+        spec.actuators.commanded_thrust.space_converter = SpaceConverter.make(
+            "Space_Float32MultiArray",
+            dtype="float32",
+            low=[10000],
+            high=[60000],
+        )
+
+        # Desired attitude
+        spec.actuators.commanded_attitude.rate = rate
+        spec.actuators.commanded_attitude.space_converter = SpaceConverter.make(
+            "Space_Float32MultiArray",
+            dtype="float32",
+            low=[-30, -30, -30],  # [phi, theta, psi]
+            high=[30, 30, 30],
         )
 
     @staticmethod
@@ -139,7 +170,8 @@ class Crazyflie(Object):
         # Modify default agnostic params
         # Only allow changes to the agnostic params (rates, windows, (space)converters, etc...
         spec.config.name = name
-        spec.config.sensors = sensors if sensors is not None else ["pos", "vel", "orientation", "gyroscope", "accelerometer"]
+        spec.config.sensors = sensors if sensors is not None else ["pos", "vel", "orientation", "gyroscope",
+                                                                   "accelerometer"]
         spec.config.states = states if states is not None else ["pos", "vel", "orientation", "angular_vel"]
         spec.config.actuators = actuators if actuators is not None else []  # ["external_force"]
 
@@ -194,6 +226,7 @@ class Crazyflie(Object):
             "ForceController", "external_force", rate=spec.actuators.pwm_input.rate, process=2,
             mode="external_force"
         )
+
         # Connect all engine nodes
         graph.add([pos, vel, orientation, gyroscope, accelerometer, external_force])
         # graph.connect(source=external_force.outputs.action_applied, target=accelerometer.inputs.input_force, skip=True)
@@ -209,6 +242,47 @@ class Crazyflie(Object):
 
         # Check graph validity (commented out)
         # graph.is_valid(plot=True)
+
+    @staticmethod
+    @register.engine(entity_id, OdeEngine)
+    def ode_engine(spec: ObjectSpec, graph: EngineGraph):
+        # Import any object specific entities for this engine
+        import Crazyflie_Simulation.solid.pybullet  # noqa # pylint: disable=unused-import
+
+        # Set object arguments
+        spec.OdeEngine.ode = "Crazyflie_Simulation.solid.eom.crazyflie_ode/crazyflie_ode"
+
+        # Set default parameters of crazyflie ode [mass, gain, time constant]
+        spec.OdeEngine.ode_params = [0.03303, 1.1094, 0.183806]
+
+        # Create engine_states
+        spec.OdeEngine.states.model_state = EngineState.make("OdeEngineState")
+
+        # Create output engine node
+        x = EngineNode.make("OdeOutput", "x", rate=spec.sensors.gyroscope.rate, process=2)
+
+        # Create sensor engine nodes
+        pos = EngineNode.make("FloatMultiArrayOutput", "pos", rate=spec.sensors.pos.rate, idx=[0, 1, 2])
+        orientation = EngineNode.make("FloatMultiArrayOutput", "orientation", rate=spec.sensors.orientation.rate,
+                                      idx=[6, 7])
+
+        # Create actuator engine nodes
+        action = EngineNode.make("OdeMultiInput", "crazyflie_ode", rate=spec.actuators.commanded_attitude.rate,
+                                 process=2, default_action=[10000, 0, 0])
+
+        # Connect all engine nodes
+        graph.add([x, pos, orientation, action])
+        # actuator
+        graph.connect(actuator="commanded_attitude", target=action.inputs.commanded_attitude)
+        graph.connect(actuator="commanded_thrust", target=action.inputs.commanded_thrust)
+
+        # observation
+        graph.connect(source=x.outputs.observation, target=pos.inputs.observation_array)
+        graph.connect(source=x.outputs.observation, target=orientation.inputs.observation_array)
+
+        # sensors
+        graph.connect(source=pos.outputs.observation, sensor="pos")
+        graph.connect(source=orientation.outputs.observation, sensor="orientation")
 
         # graph.gui()
 
@@ -382,7 +456,8 @@ class Solid(Object):
         # Create actuator engine nodes
         # Rate=None, but we will connect it to an actuator (thus will use the rate set in the agnostic specification)
         external_force = EngineNode.make(
-            "ForceController", "external_force", rate=spec.actuators.external_force.rate, process=2, mode="external_force"
+            "ForceController", "external_force", rate=spec.actuators.external_force.rate, process=2,
+            mode="external_force"
         )
 
         # Connect all engine nodes
@@ -395,4 +470,3 @@ class Solid(Object):
 
         # Check graph validity (commented out)
         # graph.is_valid(plot=True)
-
