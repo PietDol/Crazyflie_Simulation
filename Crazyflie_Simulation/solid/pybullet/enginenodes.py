@@ -166,63 +166,25 @@ class ForceController(EngineNode):
         return dict(action_applied=action_applied)
 
 
-class EmptyEningeNode(EngineNode):
+class EmptyEngineNode(EngineNode):
     @staticmethod
-    @register.spec("EmptyEningeNode", EngineNode)
+    @register.spec("EmptyEngineNode", EngineNode)
     def spec(
             spec: NodeSpec,
             name: str,
             rate: float,
-            # process: Optional[int] = p.ENGINE,
             color: Optional[str] = "pink",
-            # mode: str = "nothing",  # = mode?
     ):
         # Performs all the steps to fill-in the params with registered info about all functions.
-        # spec.initialize(ForceController)
 
         # Modify default node params
         spec.config.name = name
         spec.config.rate = rate
-        # spec.config.process = process
         spec.config.inputs = ["tick", "action"]
-        # spec.config.outputs = ["action_applied"]
-
-        # Set parameters, defined by the signature of cls.initialize(...)
-        # spec.config.links = links if isinstance(links, list) else []
-        # links = links if isinstance(links, list) else []
-        # spec.config.mode = mode
-        # spec.config.force_target = force_target if force_target else [0.0] * len(links)
 
     def initialize(self):
         """Initializes the link sensor node according to the spec."""
         pass
-        # self.obj_name = self.config["name"]
-        # assert self.process == p.ENGINE, (
-        #     "Simulation node requires a reference to the simulator," " hence it must be launched in the Bridge process"
-        # )
-        # flag = self.obj_name in self.simulator["robots"]
-        # assert flag, f'Simulator object "{self.simulator}" is not compatible with this simulation node.'
-        # self.robot = self.simulator["robots"][self.obj_name]
-
-        # If no links are provided, take baselink
-        # if len(links) == 0:
-        #     for pb_name, part in self.robot.parts.items():
-        #         bodyid, linkindex = part.get_bodyid_linkindex()
-        #         if linkindex == -1:
-        #             links.append(pb_name)
-        #
-        # self.links = links
-        # self.mode = mode
-        # self.force_target = force_target
-        # self._p = self.simulator["client"]
-        # self.physics_client_id = self._p._client
-        #
-        # self.objectUniqueId = []
-        # self.linkIndex = []
-        # for _idx, pb_name in enumerate(links):
-        #     objectid, linkindex = self.robot.parts[pb_name].get_bodyid_linkindex()
-        #     self.objectUniqueId.append(objectid), self.linkIndex.append(linkindex)
-
 
     @register.states()
     def reset(self):
@@ -238,6 +200,110 @@ class EmptyEningeNode(EngineNode):
 
         Input `tick` ensures that this node is I/O synchronized with the simulator."""
         pass
+
+
+class FloatMultiArrayOutput(EngineNode):
+    @staticmethod
+    @register.spec("FloatMultiArrayOutput", EngineNode)
+    def spec(
+            spec,
+            name: str,
+            rate: float,
+            idx: Optional[list] = [0],
+            process: Optional[int] = p.ENVIRONMENT,
+            color: Optional[str] = "cyan",
+    ):
+        """
+        FloatOutput spec
+        :param idx: index of the value of interest from the array.
+        """
+        # Performs all the steps to fill-in the params with registered info about all functions.
+
+        # Modify default node params
+        spec.config.name = name
+        spec.config.rate = rate
+        spec.config.process = process
+        spec.config.inputs = ["observation_array"]
+        spec.config.outputs = ["observation"]
+
+        # Custom node params
+        spec.config.idx = idx
+
+    def initialize(self, idx):
+        self.obj_name = self.config["name"]
+        self.idx = idx
+
+    @register.states()
+    def reset(self):
+        pass
+
+    @register.inputs(observation_array=Float32MultiArray)
+    @register.outputs(observation=Float32MultiArray)
+    def callback(self, t_n: float, observation_array: Optional[Msg] = None):
+        data = len(self.idx) * [0]
+        for idx, _data in enumerate(self.idx):
+            data[idx] = observation_array.msgs[-1].data[_data]
+        # if statement to add yaw since Jacob didn't use that
+        if self.idx[0] == 6 and self.idx[1] == 7:
+            data.append(0)
+        return dict(observation=Float32MultiArray(data=data))
+
+
+class OdeMultiInput(EngineNode):
+    @staticmethod
+    @register.spec("OdeMultiInput", EngineNode)
+    def spec(
+            spec,
+            name: str,
+            rate: float,
+            default_action: List,
+            process: Optional[int] = p.ENGINE,
+            color: Optional[str] = "green",
+    ):
+        """OdeInput spec"""
+        # Modify default node params
+        spec.config.name = name
+        spec.config.rate = rate
+        spec.config.process = process
+        spec.config.inputs = ["tick", "commanded_thrust", "commanded_attitude"]
+        spec.config.outputs = ["action_applied"]
+
+        # Set custom node params
+        spec.config.default_action = default_action
+
+    def initialize(self, default_action):
+        # We will probably use self.simulator[self.obj_name] in callback & reset.
+        assert (
+                self.process == p.ENGINE
+        ), "Simulation node requires a reference to the simulator, hence it must be launched in the Engine process"
+        self.obj_name = self.config["name"]
+        self.default_action = np.array(default_action)
+
+    @register.states()
+    def reset(self):
+        self.simulator[self.obj_name]["input"] = np.squeeze(np.array(self.default_action))
+
+    @register.inputs(tick=UInt64, commanded_thrust=Float32MultiArray, commanded_attitude=Float32MultiArray)
+    @register.outputs(action_applied=Float32MultiArray)
+    def callback(
+            self,
+            t_n: float,
+            tick: Optional[Msg] = None,
+            commanded_thrust: Optional[Float32MultiArray] = None,
+            commanded_attitude: Optional[Float32MultiArray] = None,
+    ):
+        assert isinstance(self.simulator[self.obj_name], dict), (
+                'Simulator object "%s" is not compatible with this simulation node.' % self.simulator[self.obj_name]
+        )
+        u = [np.squeeze(commanded_thrust.msgs[-1].data), np.squeeze(commanded_attitude.msgs[-1].data[0]),
+             np.squeeze(commanded_attitude.msgs[-1].data[1])]
+        action_applied = [commanded_thrust.msgs[-1], commanded_attitude.msgs[-1]]
+        # Set action in simulator for next step.
+        self.simulator[self.obj_name]["input"] = u
+
+        # Send action that has been applied.
+        # return dict(action_applied=action_applied)
+        return dict(action_applied=Float32MultiArray(data=action_applied))
 
 
 # class LinkSensor(EngineNode):

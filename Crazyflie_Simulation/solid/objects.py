@@ -16,7 +16,7 @@ class Crazyflie(Object):
     @staticmethod
     @register.sensors(
         pos=Float32MultiArray, vel=Float32MultiArray, orientation=Float32MultiArray, gyroscope=Float32MultiArray,
-        accelerometer=Float32MultiArray
+        accelerometer=Float32MultiArray,
     )
     @register.engine_states(
         pos=Float32MultiArray,
@@ -24,6 +24,7 @@ class Crazyflie(Object):
         orientation=Float32MultiArray,
         angular_vel=Float32MultiArray,
         lateral_friction=Float32,
+        model_state=Float32MultiArray,
     )
     @register.actuators(pwm_input=Float32MultiArray, commanded_thrust=Float32MultiArray,
                         commanded_attitude=Float32MultiArray)
@@ -108,6 +109,15 @@ class Crazyflie(Object):
             dtype="float32",
             low=0.1,
             high=0.5,
+        )
+
+        # Model state
+        # States are: [x, y, z, x_dot, y_dot, z_dot, phi, theta, thrust_state]
+        spec.states.model_state.space_converter = SpaceConverter.make(
+            "Space_Float32MultiArray",
+            dtype="float32",
+            low=[-1000, 1000, 0, -100, -100, -100, -30, -30, -100000],
+            high=[1000, 1000, 1000, 100, 100, 100, 30, 30, 100000],
         )
 
         # Actuators
@@ -216,23 +226,16 @@ class Crazyflie(Object):
             "ForceController", "external_force", rate=spec.actuators.pwm_input.rate, process=2,
             mode="external_force"
         )
-        commanded_attitude = EngineNode.make(
-            "EmptyEningeNode", "commanded_attitude", rate=spec.actuators.commanded_attitude.rate
-        )
-        commanded_thrust = EngineNode.make(
-            "EmptyEningeNode", "commanded_thrust", rate=spec.actuators.commanded_thrust.rate
-        )
+
         # Connect all engine nodes
         graph.add(
-            [pos, vel, orientation, gyroscope, accelerometer, external_force, commanded_attitude, commanded_thrust])
+            [pos, vel, orientation, gyroscope, accelerometer, external_force])
         graph.connect(source=pos.outputs.obs, sensor="pos")
         graph.connect(source=vel.outputs.obs, sensor="vel")
         graph.connect(source=orientation.outputs.obs, sensor="orientation")
         graph.connect(source=gyroscope.outputs.obs, sensor="gyroscope")
         graph.connect(source=accelerometer.outputs.obs, sensor="accelerometer")
         graph.connect(actuator="pwm_input", target=external_force.inputs.action)
-        graph.connect(actuator="commanded_attitude", target=commanded_attitude.inputs.action)
-        graph.connect(actuator="commanded_thrust", target=commanded_thrust.inputs.action)
 
         # graph.gui()
 
@@ -242,7 +245,45 @@ class Crazyflie(Object):
     @staticmethod
     @register.engine(entity_id, OdeEngine)
     def ode_engine(spec: ObjectSpec, graph: EngineGraph):
-        pass
+        # Import any object specific entities for this engine
+        import Crazyflie_Simulation.solid.pybullet  # noqa # pylint: disable=unused-import
+
+        # Set object arguments
+        spec.OdeEngine.ode = "Crazyflie_Simulation.solid.eom.crazyflie_ode/crazyflie_ode"
+
+        # Set default parameters of crazyflie ode [mass, gain, time constant]
+        spec.OdeEngine.ode_params = [0.03303, 1.1094, 0.183806]
+
+        # Create engine_states
+        spec.OdeEngine.states.model_state = EngineState.make("OdeEngineState")
+
+        # Create output engine node
+        x = EngineNode.make("OdeOutput", "x", rate=spec.sensors.gyroscope.rate, process=2)
+
+        # Create sensor engine nodes
+        pos = EngineNode.make("FloatMultiArrayOutput", "pos", rate=spec.sensors.pos.rate, idx=[0, 1, 2])
+        orientation = EngineNode.make("FloatMultiArrayOutput", "orientation", rate=spec.sensors.orientation.rate,
+                                      idx=[6, 7])
+
+        # Create actuator engine nodes
+        action = EngineNode.make("OdeMultiInput", "crazyflie_ode", rate=spec.actuators.commanded_attitude.rate,
+                                 process=2, default_action=[10000, 0, 0])
+
+        # Connect all engine nodes
+        graph.add([x, pos, orientation, action])
+        # actuator
+        graph.connect(actuator="commanded_attitude", target=action.inputs.commanded_attitude)
+        graph.connect(actuator="commanded_thrust", target=action.inputs.commanded_thrust)
+
+        # observation
+        graph.connect(source=x.outputs.observation, target=pos.inputs.observation_array)
+        graph.connect(source=x.outputs.observation, target=orientation.inputs.observation_array)
+
+        # sensors
+        graph.connect(source=pos.outputs.observation, sensor="pos")
+        graph.connect(source=orientation.outputs.observation, sensor="orientation")
+
+        # graph.gui()
 
 
 class Solid(Object):
