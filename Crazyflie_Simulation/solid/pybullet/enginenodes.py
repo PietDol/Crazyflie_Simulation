@@ -166,6 +166,80 @@ class ForceController(EngineNode):
         return dict(action_applied=action_applied)
 
 
+class EmptyEningeNode(EngineNode):
+    @staticmethod
+    @register.spec("EmptyEningeNode", EngineNode)
+    def spec(
+            spec: NodeSpec,
+            name: str,
+            rate: float,
+            # process: Optional[int] = p.ENGINE,
+            color: Optional[str] = "pink",
+            # mode: str = "nothing",  # = mode?
+    ):
+        # Performs all the steps to fill-in the params with registered info about all functions.
+        # spec.initialize(ForceController)
+
+        # Modify default node params
+        spec.config.name = name
+        spec.config.rate = rate
+        # spec.config.process = process
+        spec.config.inputs = ["tick", "action"]
+        # spec.config.outputs = ["action_applied"]
+
+        # Set parameters, defined by the signature of cls.initialize(...)
+        # spec.config.links = links if isinstance(links, list) else []
+        # links = links if isinstance(links, list) else []
+        # spec.config.mode = mode
+        # spec.config.force_target = force_target if force_target else [0.0] * len(links)
+
+    def initialize(self):
+        """Initializes the link sensor node according to the spec."""
+        pass
+        # self.obj_name = self.config["name"]
+        # assert self.process == p.ENGINE, (
+        #     "Simulation node requires a reference to the simulator," " hence it must be launched in the Bridge process"
+        # )
+        # flag = self.obj_name in self.simulator["robots"]
+        # assert flag, f'Simulator object "{self.simulator}" is not compatible with this simulation node.'
+        # self.robot = self.simulator["robots"][self.obj_name]
+
+        # If no links are provided, take baselink
+        # if len(links) == 0:
+        #     for pb_name, part in self.robot.parts.items():
+        #         bodyid, linkindex = part.get_bodyid_linkindex()
+        #         if linkindex == -1:
+        #             links.append(pb_name)
+        #
+        # self.links = links
+        # self.mode = mode
+        # self.force_target = force_target
+        # self._p = self.simulator["client"]
+        # self.physics_client_id = self._p._client
+        #
+        # self.objectUniqueId = []
+        # self.linkIndex = []
+        # for _idx, pb_name in enumerate(links):
+        #     objectid, linkindex = self.robot.parts[pb_name].get_bodyid_linkindex()
+        #     self.objectUniqueId.append(objectid), self.linkIndex.append(linkindex)
+
+
+    @register.states()
+    def reset(self):
+        """This force controller is stateless, so nothing happens here."""
+        pass
+
+    @register.inputs(tick=UInt64, action=Float32MultiArray)
+    # @register.outputs(action_applied=Float32MultiArray)
+    def callback(self, t_n: float, tick: Msg, action: Msg):
+        """Produces a link sensor measurement called `obs`.
+
+        The measurement is published at the specified rate * real_time_factor.
+
+        Input `tick` ensures that this node is I/O synchronized with the simulator."""
+        pass
+
+
 # class LinkSensor(EngineNode):
 #     @staticmethod
 #     @register.spec("LinkSensor", EngineNode)

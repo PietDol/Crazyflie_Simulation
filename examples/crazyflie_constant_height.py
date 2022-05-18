@@ -26,7 +26,7 @@ if __name__ == "__main__":
 
     # Define rate
     real_reset = False
-    rate = 500 #220?
+    rate = 500  # 220?
     safe_rate = 500
     max_steps = 300
 
@@ -36,7 +36,9 @@ if __name__ == "__main__":
     # Create solid object
     urdf_path = os.path.dirname(Crazyflie_Simulation.__file__) + "/solid/assets/"
     crazyflie = eagerx.Object.make(
-        "Crazyflie", "crazyflie", urdf=urdf_path + "cf2x.urdf", rate=rate, sensors=["pos", "vel", "orientation", "gyroscope", "accelerometer"], actuators=["pwm_input"],
+        "Crazyflie", "crazyflie", urdf=urdf_path + "cf2x.urdf", rate=rate,
+        sensors=["pos", "vel", "orientation", "gyroscope", "accelerometer"],
+        actuators=["pwm_input", "commanded_thrust", "commanded_attitude"],
         base_pos=[0, 0, 1], fixed_base=False,
         states=["pos", "vel", "orientation", "angular_vel"]
     )
@@ -78,8 +80,11 @@ if __name__ == "__main__":
     # graph.connect(action="external_force", target=solid.actuators.external_force)
     graph.connect(action="desired_attitude", target=attitude_pid.inputs.desired_attitude)
     graph.connect(action="desired_thrust", target=power_distribution.inputs.desired_thrust)
+    graph.connect(action="desired_attitude", target=crazyflie.actuators.commanded_attitude)
+    graph.connect(action="desired_thrust", target=crazyflie.actuators.commanded_thrust)
     graph.connect(source=attitude_pid.outputs.new_attitude_rate, target=attitude_rate_pid.inputs.desired_rate)
-    graph.connect(source=attitude_rate_pid.outputs.new_motor_control, target=power_distribution.inputs.calculated_control)
+    graph.connect(source=attitude_rate_pid.outputs.new_motor_control,
+                  target=power_distribution.inputs.calculated_control)
     graph.connect(source=power_distribution.outputs.pwm_signal, target=crazyflie.actuators.pwm_input)
     graph.connect(source=crazyflie.sensors.gyroscope, target=state_estimator.inputs.angular_velocity)
     graph.connect(source=crazyflie.sensors.gyroscope, target=attitude_rate_pid.inputs.current_rate)
@@ -99,7 +104,9 @@ if __name__ == "__main__":
     # Define engines
     # engine = Engine.make("RealEngine", rate=rate, sync=True, process=process.NEW_PROCESS)
     engine = eagerx.Engine.make("PybulletEngine", rate=safe_rate, gui=True, egl=True, sync=True, real_time_factor=0.0)
-                                # process=eagerx.process.ENVIRONMENT)  # delete process to run faster, this is useful for debugger
+
+
+    # process=eagerx.process.ENVIRONMENT)  # delete process to run faster, this is useful for debugger
 
     # Define step function
     def step_fn(prev_obs, obs, action, steps):
@@ -146,14 +153,15 @@ if __name__ == "__main__":
         _, done = env.reset(), False
         desired_altitude = 2
         while not done:
-            desired_thrust_pid = PID(kp=10000, ki=50, kd=2500000, rate=rate) #kp 2500 ki 0.2 kd 10000
+            desired_thrust_pid = PID(kp=10000, ki=50, kd=2500000, rate=rate)  # kp 2500 ki 0.2 kd 10000
 
             action = env.action_space.sample()
-            action["desired_attitude"][0] = 0           # Roll
-            action["desired_attitude"][1] = 0           # Pitch
-            action["desired_attitude"][2] = 0           # Yaw
+            action["desired_attitude"][0] = 0  # Roll
+            action["desired_attitude"][1] = 0  # Pitch
+            action["desired_attitude"][2] = 0  # Yaw
             try:
-                action["desired_thrust"][0] = desired_thrust_pid.next_action(current=obs["position"][0][2], desired=desired_altitude)
+                action["desired_thrust"][0] = desired_thrust_pid.next_action(current=obs["position"][0][2],
+                                                                             desired=desired_altitude)
             except:
                 # print("fucked") # debug
                 action["desired_thrust"][0] = desired_thrust_pid.next_action(current=0, desired=desired_altitude)
@@ -164,4 +172,3 @@ if __name__ == "__main__":
             # print(obs["orientation"])
             # print("Position:")
             # print(obs["position"])
-
