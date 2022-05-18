@@ -351,8 +351,9 @@ class MakePicture(eagerx.Node):
 
         def plot_x(img):
             """"Changes the plot so that you can see from the x axis side"""
-            z_correction = arm_length*np.sin(roll)
-            x_correction = arm_length*np.cos(roll)
+            z_correction = arm_length*np.sin(-pitch)
+            x_correction = arm_length*np.cos(-pitch)
+            # print(f'pitch is: {-pitch*180/np.pi} degrees')
             img = cv2.circle(img,  (int((pos_x + x_correction)*200)//1 + width//2 , height - int((pos_z+ z_correction)*200//1) - offset), 5, (255, 0, 0), -1)
             img = cv2.circle(img,  (int((pos_x - x_correction)*200)//1 + width//2 , height - int((pos_z - z_correction)*200//1) - offset), 5, (255, 0, 0), -1)
             img = cv2.line(img, (int((pos_x + x_correction)*200)//1 + width//2 , height - int((pos_z+ z_correction)*200//1) - offset),
@@ -361,16 +362,16 @@ class MakePicture(eagerx.Node):
 
         def plot_y(img):
             """"Changes the plot so that you can see from the y axis side"""
-            z_correction = arm_length*np.sin(pitch)
-            y_correction = arm_length*np.cos(pitch)
+            z_correction = arm_length*np.sin(roll)
+            y_correction = arm_length*np.cos(roll)
             img = cv2.circle(img,  (int((pos_y + y_correction)*200)//1 + width//2 , height - int((pos_z+ z_correction)*200//1) - offset), 5, (255, 0, 0), -1)
             img = cv2.circle(img,  (int((pos_y - y_correction)*200)//1 + width//2 , height - int((pos_z - z_correction)*200//1) - offset), 5, (255, 0, 0), -1)
             img = cv2.line(img, (int((pos_y + y_correction)*200)//1 + width//2 , height - int((pos_z+ z_correction)*200//1) - offset),
                            (int((pos_y - y_correction)*200)//1 + width//2 , height - int((pos_z - z_correction)*200//1) - offset), (255, 0, 0), 2)
             return img
 
-        # img = plot_x(img) # uncomment this line to show plot from x_side
-        img = plot_y(img) # uncomment this line to show plot from y_side
+        img = plot_x(img) # uncomment this line to show plot from x_side
+        # img = plot_y(img) # uncomment this line to show plot from y_side
         data = img.tobytes("C")
         msg = Image(data=data, height=height, width=width, encoding="bgr8", step=3 * width)
         return dict(image=msg)
