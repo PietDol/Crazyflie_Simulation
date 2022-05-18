@@ -33,7 +33,7 @@ if __name__ == "__main__":
     # Initialize empty graph
     graph = Graph.create()
 
-    engine_mode = "Ode"
+    engine_mode = "Pybullet"
     # Create crazyflie object
     urdf_path = os.path.dirname(Crazyflie_Simulation.__file__) + "/solid/assets/"
 
@@ -198,7 +198,7 @@ if __name__ == "__main__":
                                                                              desired=desired_altitude)
             except:
                 action["desired_thrust"][0] = desired_thrust_pid.next_action(current=0, desired=desired_altitude)
-            action["desired_thrust"][0] = 36100
+            # action["desired_thrust"][0] = 36100
             obs, reward, done, info = env.step(action)
             rgb = env.render("rgb_array")
             # print("Orientation:")
