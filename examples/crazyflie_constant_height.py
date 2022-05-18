@@ -155,13 +155,13 @@ if __name__ == "__main__":
     for eps in range(5000):
         print(f"Episode {eps}")
         _, done = env.reset(), False
-        desired_altitude = 2
+        desired_altitude = 1
         while not done:
             desired_thrust_pid = PID(kp=10000, ki=50, kd=2500000, rate=rate) #kp 2500 ki 0.2 kd 10000
 
             action = env.action_space.sample()
             action["desired_attitude"][0] = 0           # Roll
-            action["desired_attitude"][1] = 0           # Pitch
+            action["desired_attitude"][1] = 10           # Pitch
             action["desired_attitude"][2] = 0           # Yaw
             try:
                 action["desired_thrust"][0] = desired_thrust_pid.next_action(current=obs["position"][0][2], desired=desired_altitude)
