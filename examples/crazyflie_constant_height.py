@@ -26,14 +26,14 @@ if __name__ == "__main__":
 
     # Define rate
     real_reset = False
-    rate = 500  # 220?
-    safe_rate = 500
+    rate = 220  # 220?
+    safe_rate = 220
     max_steps = 300
 
     # Initialize empty graph
     graph = Graph.create()
 
-    engine_mode = "Ode"
+    engine_mode = "Pybullet"
     # Create crazyflie object
     urdf_path = os.path.dirname(Crazyflie_Simulation.__file__) + "/solid/assets/"
 
@@ -197,7 +197,7 @@ if __name__ == "__main__":
         _, done = env.reset(), False
         desired_altitude = 2
         while not done:
-            desired_thrust_pid = PID(kp=10000, ki=50, kd=2500000, rate=rate)  # kp 2500 ki 0.2 kd 10000
+            desired_thrust_pid = PID(kp=10000, ki=50, kd=2500000, rate=rate)  # kp 10000 ki 50 kd 2500000
 
             action = env.action_space.sample()
             action["desired_attitude"][0] = 0  # Roll

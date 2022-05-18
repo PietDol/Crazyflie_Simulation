@@ -231,8 +231,8 @@ class AccelerometerSensor(EngineNode):
         # calculate acceleration dy/dt
         # todo: This acceleration is not exactly the same as calculated from the applied force in external_force
         diff = (current - last) / (1 / self.rate)
-        print("acceleration", diff)
-        print("=" * 50)
+        # print("acceleration", diff)       # debug
+        # print("=" * 50)                   # debug
         return dict(obs=Float32MultiArray(data=diff))
 
 class FloatMultiArrayOutput(EngineNode):

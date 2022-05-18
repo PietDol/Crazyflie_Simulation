@@ -297,11 +297,11 @@ class MakePicture(eagerx.Node):
 
         # Add space converters
         spec.inputs.position.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
-                                                                                  [0, 0, 0],
-                                                                                  [3, 3, 3], dtype="float32")
+                                                                          [0, 0, 0],
+                                                                          [3, 3, 3], dtype="float32")
         spec.inputs.orientation.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
-                                                                              [0, 0, 0],
-                                                                              [3, 3, 3], dtype="float32")
+                                                                             [0, 0, 0],
+                                                                             [3, 3, 3], dtype="float32")
         # spec.outputs.image.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
         #                                                                       [0, 0, 0],
         #                                                                       [3, 3, 3], dtype="float32")
@@ -318,7 +318,7 @@ class MakePicture(eagerx.Node):
     def callback(self, t_n: float, position: Msg, orientation: Msg):
         height = 880
         width = 880
-        offset = 40 # offset of the picture from the sides
+        offset = 40  # offset of the picture from the sides
         pos_x, pos_y, pos_z = position.msgs[-1].data[0], position.msgs[-1].data[1], position.msgs[-1].data[2]
         if len(orientation.msgs[-1].data) == 4:
             euler_orientation = pybullet.getEulerFromQuaternion(orientation.msgs[-1].data)
@@ -327,16 +327,16 @@ class MakePicture(eagerx.Node):
         roll, pitch, yaw = euler_orientation[0], euler_orientation[1], euler_orientation[2]
 
         img = np.zeros((height, width, 3), np.uint8)
-        img[:,:] = (255,255,255)
+        img[:, :] = (255, 255, 255)
 
-        for i in range(9): # add coordinate system to the rendered picture y axis
+        for i in range(9):  # add coordinate system to the rendered picture y axis
             y_axis = np.linspace(0, 4, 9)
             length = 10
             x = offset
             text_height = 4
-            y = height - i*100 - offset
-            img = cv2.line(img, (x, y), (x - length, y), (0,0,0), 1) # make markers on y-axis
-            img = cv2.putText(img, str(y_axis[i]), (5, y + text_height), cv2.FONT_HERSHEY_PLAIN, 1, (0,0,0))
+            y = height - i * 100 - offset
+            img = cv2.line(img, (x, y), (x - length, y), (0, 0, 0), 1)  # make markers on y-axis
+            img = cv2.putText(img, str(y_axis[i]), (5, y + text_height), cv2.FONT_HERSHEY_PLAIN, 1, (0, 0, 0))
 
         for i in range(9):  # add coordinate system to the rendered picture x axis
             x_axis = np.linspace(2, -2, 9)
@@ -344,101 +344,45 @@ class MakePicture(eagerx.Node):
             x = width - i * 100 - offset
             text_height = 4
             y = height - offset
-            img = cv2.line(img, (x, height - offset), (x, height - offset + length), (0, 0, 0), 1)  # make markers on x-axis
-            img = cv2.putText(img, str(x_axis[i]), (x - text_height*4, y + 25), cv2.FONT_HERSHEY_PLAIN, 1, (0,0,0))
+            img = cv2.line(img, (x, height - offset), (x, height - offset + length), (0, 0, 0),
+                           1)  # make markers on x-axis
+            img = cv2.putText(img, str(x_axis[i]), (x - text_height * 4, y + 25), cv2.FONT_HERSHEY_PLAIN, 1, (0, 0, 0))
 
         #  create border
-        img = cv2.rectangle(img, (offset, offset), (height - offset, width - offset), (0,0,0), 1)
-        arm_length = 0.028*5
+        img = cv2.rectangle(img, (offset, offset), (height - offset, width - offset), (0, 0, 0), 1)
+        arm_length = 0.028 * 5
 
         def plot_x(img):
             """"Changes the plot so that you can see from the x axis side"""
-            z_correction = arm_length*np.sin(-pitch)
-            x_correction = arm_length*np.cos(-pitch)
+            z_correction = arm_length * np.sin(-pitch)
+            x_correction = arm_length * np.cos(-pitch)
             # print(f'pitch is: {-pitch*180/np.pi} degrees')
-            img = cv2.circle(img,  (int((pos_x + x_correction)*200)//1 + width//2 , height - int((pos_z+ z_correction)*200//1) - offset), 5, (255, 0, 0), -1)
-            img = cv2.circle(img,  (int((pos_x - x_correction)*200)//1 + width//2 , height - int((pos_z - z_correction)*200//1) - offset), 5, (255, 0, 0), -1)
-            img = cv2.line(img, (int((pos_x + x_correction)*200)//1 + width//2 , height - int((pos_z+ z_correction)*200//1) - offset),
-                           (int((pos_x - x_correction)*200)//1 + width//2 , height - int((pos_z - z_correction)*200//1) - offset), (255, 0, 0), 2)
+            img = cv2.circle(img, (int((pos_x + x_correction) * 200) // 1 + width // 2,
+                                   height - int((pos_z + z_correction) * 200 // 1) - offset), 5, (255, 0, 0), -1)
+            img = cv2.circle(img, (int((pos_x - x_correction) * 200) // 1 + width // 2,
+                                   height - int((pos_z - z_correction) * 200 // 1) - offset), 5, (255, 0, 0), -1)
+            img = cv2.line(img, (int((pos_x + x_correction) * 200) // 1 + width // 2,
+                                 height - int((pos_z + z_correction) * 200 // 1) - offset),
+                           (int((pos_x - x_correction) * 200) // 1 + width // 2,
+                            height - int((pos_z - z_correction) * 200 // 1) - offset), (255, 0, 0), 2)
             return img
 
         def plot_y(img):
             """"Changes the plot so that you can see from the y axis side"""
-            z_correction = arm_length*np.sin(roll)
-            y_correction = arm_length*np.cos(roll)
-            img = cv2.circle(img,  (int((pos_y + y_correction)*200)//1 + width//2 , height - int((pos_z+ z_correction)*200//1) - offset), 5, (255, 0, 0), -1)
-            img = cv2.circle(img,  (int((pos_y - y_correction)*200)//1 + width//2 , height - int((pos_z - z_correction)*200//1) - offset), 5, (255, 0, 0), -1)
-            img = cv2.line(img, (int((pos_y + y_correction)*200)//1 + width//2 , height - int((pos_z+ z_correction)*200//1) - offset),
-                           (int((pos_y - y_correction)*200)//1 + width//2 , height - int((pos_z - z_correction)*200//1) - offset), (255, 0, 0), 2)
+            z_correction = arm_length * np.sin(roll)
+            y_correction = arm_length * np.cos(roll)
+            img = cv2.circle(img, (int((pos_y + y_correction) * 200) // 1 + width // 2,
+                                   height - int((pos_z + z_correction) * 200 // 1) - offset), 5, (255, 0, 0), -1)
+            img = cv2.circle(img, (int((pos_y - y_correction) * 200) // 1 + width // 2,
+                                   height - int((pos_z - z_correction) * 200 // 1) - offset), 5, (255, 0, 0), -1)
+            img = cv2.line(img, (int((pos_y + y_correction) * 200) // 1 + width // 2,
+                                 height - int((pos_z + z_correction) * 200 // 1) - offset),
+                           (int((pos_y - y_correction) * 200) // 1 + width // 2,
+                            height - int((pos_z - z_correction) * 200 // 1) - offset), (255, 0, 0), 2)
             return img
 
-        img = plot_x(img) # uncomment this line to show plot from x_side
+        img = plot_x(img)  # uncomment this line to show plot from x_side
         # img = plot_y(img) # uncomment this line to show plot from y_side
         data = img.tobytes("C")
         msg = Image(data=data, height=height, width=width, encoding="bgr8", step=3 * width)
         return dict(image=msg)
-
-
-# class AltitudePID(eagerx.Node):
-#     @staticmethod
-#     @eagerx.register.spec("AltitudePID", eagerx.Node)
-#     def spec(
-#             spec,
-#             name: str,
-#             rate: float,
-#             n: int,
-#     ):
-#         # Performs all the steps to fill-in the params with registered info about all functions.
-#         spec.initialize(AltitudePID)
-#
-#         # Modify default node params
-#         spec.config.name = name
-#         spec.config.rate = rate
-#         spec.config.process = eagerx.process.ENVIRONMENT
-#         spec.config.inputs = ["estimated_position", "estimated_velocity", "desired_position"]
-#         spec.config.outputs = ["desired_attitude", "desired_thrust"]
-#
-#         # Add space converters
-#         spec.inputs.estimated_position.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray", [0, 0, 0],
-#                                                                               [3, 3, 3], dtype="float32")
-#         spec.inputs.estimated_velocity.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray", [0, 0, 0],
-#                                                                               [5, 5, 5], dtype="float32")
-#         spec.inputs.desired_position.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray", [0, 0, 0],
-#                                                                               [3, 3, 3], dtype="float32")
-#         spec.outputs.desired_attitude.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
-#                                                                                     [-32767, -32767, -32767],
-#                                                                                     [32767, 32767, 32767],
-#                                                                                     dtype="float32")
-#         spec.outputs.desired_thrust.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
-#                                                                                     [-32767, -32767, -32767],
-#                                                                                     [32767, 32767, 32767],
-#                                                                                     dtype="float32")
-#
-#     def initialize(self):
-#         # self.attitude_rate_pid_yaw = PID(kp=120, ki=16.7, kd=0, rate=self.rate)
-#         # self.attitude_rate_pid_pitch = PID(kp=250, ki=500, kd=2.5, rate=self.rate)
-#         # self.attitude_rate_pid_roll = PID(kp=250, ki=500, kd=2.5, rate=self.rate)
-#         pass
-#
-#     @eagerx.register.states()
-#     def reset(self):
-#         # self.attitude_rate_pid_yaw.reset()
-#         # self.attitude_rate_pid_pitch.reset()
-#         # self.attitude_rate_pid_roll.reset()
-#         pass
-#
-#     @eagerx.register.inputs(estimated_position=Float32MultiArray, estimated_velocity=Float32MultiArray, desired_position=Float32MultiArray)
-#     @eagerx.register.outputs(desired_attitude=Float32MultiArray, desired_thrust=Float32MultiArray)
-#     def callback(self, t_n: float, estimated_position: Msg):
-#         # current_attitude_rate = current_rate.msgs[-1].data
-#         # desired_attitude_rate = desired_rate.msgs[-1].data
-#         #
-#         # next_yaw_rate = self.attitude_rate_pid_yaw.next_action(current=current_attitude_rate[0],
-#         #                                                        desired=desired_attitude_rate[0])
-#         # next_pitch_rate = self.attitude_rate_pid_pitch.next_action(current=current_attitude_rate[1],
-#         #                                                            desired=desired_attitude_rate[1])
-#         # next_roll_rate = self.attitude_rate_pid_roll.next_action(current=current_attitude_rate[2],
-#         #                                                          desired=desired_attitude_rate[2])
-#         # next_action = np.array([next_roll_rate, next_pitch_rate, next_yaw_rate])
-#         # return dict(new_motor_control=Float32MultiArray(data=next_action))
-#         pass
