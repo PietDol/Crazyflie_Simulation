@@ -307,7 +307,19 @@ class MakePicture(eagerx.Node):
         #                                                                       [3, 3, 3], dtype="float32")
 
     def initialize(self):
-        pass
+        self.modulus_prev = 1000
+        self.final_image = 0
+        self.save_render_image = True
+        self.axis_to_plot = 'x' # 'x' or 'y' right now
+        self.height = 880
+        self.width = 880
+        self.offset = 40  # offset of the picture from the sides
+        self.timestep = 0.1
+        self.sample_length = 2
+        self.length = 10
+        self.text_height = 4
+        self.arm_length = 0.028 * 5
+        self.font = cv2.FONT_HERSHEY_PLAIN
 
     @eagerx.register.states()
     def reset(self):
@@ -315,74 +327,89 @@ class MakePicture(eagerx.Node):
 
     @eagerx.register.inputs(position=Float32MultiArray, orientation=Float32MultiArray)
     @eagerx.register.outputs(image=Image)
+
     def callback(self, t_n: float, position: Msg, orientation: Msg):
-        height = 880
-        width = 880
-        offset = 40  # offset of the picture from the sides
         pos_x, pos_y, pos_z = position.msgs[-1].data[0], position.msgs[-1].data[1], position.msgs[-1].data[2]
+
         if len(orientation.msgs[-1].data) == 4:
             euler_orientation = pybullet.getEulerFromQuaternion(orientation.msgs[-1].data)
         else:
             euler_orientation = orientation.msgs[-1].data
         roll, pitch, yaw = euler_orientation[0], euler_orientation[1], euler_orientation[2]
 
-        img = np.zeros((height, width, 3), np.uint8)
+        img = np.zeros((self.height, self.width, 3), np.uint8)
         img[:, :] = (255, 255, 255)
 
         for i in range(9):  # add coordinate system to the rendered picture y axis
             y_axis = np.linspace(0, 4, 9)
-            length = 10
-            x = offset
-            text_height = 4
-            y = height - i * 100 - offset
-            img = cv2.line(img, (x, y), (x - length, y), (0, 0, 0), 1)  # make markers on y-axis
-            img = cv2.putText(img, str(y_axis[i]), (5, y + text_height), cv2.FONT_HERSHEY_PLAIN, 1, (0, 0, 0))
+            x = self.offset
+            y = self.height - i * 100 - self.offset
+            img = cv2.line(img, (x, y), (x - self.length, y), (0, 0, 0), 1)  # make markers on y-axis
+            img = cv2.putText(img, str(y_axis[i]), (5, y + self.text_height), self.font, 1, (0, 0, 0))
 
         for i in range(9):  # add coordinate system to the rendered picture x axis
             x_axis = np.linspace(2, -2, 9)
-            length = 10
-            x = width - i * 100 - offset
-            text_height = 4
-            y = height - offset
-            img = cv2.line(img, (x, height - offset), (x, height - offset + length), (0, 0, 0),
-                           1)  # make markers on x-axis
-            img = cv2.putText(img, str(x_axis[i]), (x - text_height * 4, y + 25), cv2.FONT_HERSHEY_PLAIN, 1, (0, 0, 0))
+            x = self.width - i * 100 - self.offset
+            y = self.height - self.offset
+            img = cv2.line(img, (x, self.height - self.offset), (x, self.height - self.offset + self.length), (0, 0, 0), 1)  # make markers on x-axis
+            img = cv2.putText(img, str(x_axis[i]), (x - self.text_height * 4, y + 25), self.font, 1, (0, 0, 0))
 
         #  create border
-        img = cv2.rectangle(img, (offset, offset), (height - offset, width - offset), (0, 0, 0), 1)
-        arm_length = 0.028 * 5
+        img = cv2.rectangle(img, (self.offset, self.offset), (self.height - self.offset, self.width - self.offset), (0, 0, 0), 1)
+
+        # give the sampled image an axis like for the render image
+        if type(self.final_image) is int:
+            self.final_image = img
 
         def plot_x(img):
             """"Changes the plot so that you can see from the x axis side"""
-            z_correction = arm_length * np.sin(-pitch)
-            x_correction = arm_length * np.cos(-pitch)
+            z_correction = self.arm_length * np.sin(-pitch)
+            x_correction = self.arm_length * np.cos(-pitch)
             # print(f'pitch is: {-pitch*180/np.pi} degrees')
-            img = cv2.circle(img, (int((pos_x + x_correction) * 200) // 1 + width // 2,
-                                   height - int((pos_z + z_correction) * 200 // 1) - offset), 5, (255, 0, 0), -1)
-            img = cv2.circle(img, (int((pos_x - x_correction) * 200) // 1 + width // 2,
-                                   height - int((pos_z - z_correction) * 200 // 1) - offset), 5, (255, 0, 0), -1)
-            img = cv2.line(img, (int((pos_x + x_correction) * 200) // 1 + width // 2,
-                                 height - int((pos_z + z_correction) * 200 // 1) - offset),
-                           (int((pos_x - x_correction) * 200) // 1 + width // 2,
-                            height - int((pos_z - z_correction) * 200 // 1) - offset), (255, 0, 0), 2)
+            img = cv2.circle(img, (int((pos_x + x_correction) * 200) // 1 + self.width // 2,
+                                   self.height - int((pos_z + z_correction) * 200 // 1) - self.offset), 5, (255, 0, 0), -1)
+            img = cv2.circle(img, (int((pos_x - x_correction) * 200) // 1 + self.width // 2,
+                                   self.height - int((pos_z - z_correction) * 200 // 1) - self.offset), 5, (255, 0, 0), -1)
+            img = cv2.line(img, (int((pos_x + x_correction) * 200) // 1 + self.width // 2,
+                                 self.height - int((pos_z + z_correction) * 200 // 1) - self.offset),
+                           (int((pos_x - x_correction) * 200) // 1 + self.width // 2,
+                            self.height - int((pos_z - z_correction) * 200 // 1) - self.offset), (255, 0, 0), 2)
             return img
 
         def plot_y(img):
             """"Changes the plot so that you can see from the y axis side"""
-            z_correction = arm_length * np.sin(roll)
-            y_correction = arm_length * np.cos(roll)
-            img = cv2.circle(img, (int((pos_y + y_correction) * 200) // 1 + width // 2,
-                                   height - int((pos_z + z_correction) * 200 // 1) - offset), 5, (255, 0, 0), -1)
-            img = cv2.circle(img, (int((pos_y - y_correction) * 200) // 1 + width // 2,
-                                   height - int((pos_z - z_correction) * 200 // 1) - offset), 5, (255, 0, 0), -1)
-            img = cv2.line(img, (int((pos_y + y_correction) * 200) // 1 + width // 2,
-                                 height - int((pos_z + z_correction) * 200 // 1) - offset),
-                           (int((pos_y - y_correction) * 200) // 1 + width // 2,
-                            height - int((pos_z - z_correction) * 200 // 1) - offset), (255, 0, 0), 2)
+            z_correction = self.arm_length * np.sin(roll)
+            y_correction = self.arm_length * np.cos(roll)
+            img = cv2.circle(img, (int((pos_y + y_correction) * 200) // 1 + self.width // 2,
+                                   self.height - int((pos_z + z_correction) * 200 // 1) - self.offset), 5, (255, 0, 0), -1)
+            img = cv2.circle(img, (int((pos_y - y_correction) * 200) // 1 + self.width // 2,
+                                   self.height - int((pos_z - z_correction) * 200 // 1) - self.offset), 5, (255, 0, 0), -1)
+            img = cv2.line(img, (int((pos_y + y_correction) * 200) // 1 + self.width // 2,
+                                 self.height - int((pos_z + z_correction) * 200 // 1) - self.offset),
+                           (int((pos_y - y_correction) * 200) // 1 + self.width // 2,
+                            self.height - int((pos_z - z_correction) * 200 // 1) - self.offset), (255, 0, 0), 2)
             return img
+        #checks which axis is selected to plot
+        if self.axis_to_plot == 'x':
+            img = plot_x(img)
+        elif self.axis_to_plot == 'y':
+            img = plot_y(img)
 
-        img = plot_x(img)  # uncomment this line to show plot from x_side
-        # img = plot_y(img) # uncomment this line to show plot from y_side
+
+        # saving the pictures at the sampled timestep and length
+        if self.save_render_image is True:
+            if (t_n % self.timestep) < self.modulus_prev:
+                if t_n <= self.sample_length:
+                    if self.axis_to_plot == 'x':
+                        self.final_image = plot_x(self.final_image)
+                    elif self.axis_to_plot == 'y':
+                        self.final_image = plot_y(self.final_image)
+                else:
+                    cv2.imwrite(f'Rendering/Images/final_image.png', self.final_image)
+
+        self.modulus_prev = t_n % self.timestep
+
         data = img.tobytes("C")
-        msg = Image(data=data, height=height, width=width, encoding="bgr8", step=3 * width)
+        msg = Image(data=data, height=self.height, width=self.width, encoding="bgr8", step=3 * self.width)
+        # print(type(msg))
         return dict(image=msg)
