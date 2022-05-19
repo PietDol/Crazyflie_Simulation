@@ -405,7 +405,7 @@ class MakePicture(eagerx.Node):
                     elif self.axis_to_plot == 'y':
                         self.final_image = plot_y(self.final_image)
                 else:
-                    cv2.imwrite(f'Rendering/Images/final_image.png', self.final_image)
+                    cv2.imwrite(f'../Crazyflie_Simulation/solid/Rendering/Images/final_image.png', self.final_image)
 
         self.modulus_prev = t_n % self.timestep
 
