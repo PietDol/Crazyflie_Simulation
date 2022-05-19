@@ -33,7 +33,7 @@ if __name__ == "__main__":
     # Initialize empty graph
     graph = Graph.create()
 
-    engine_mode = "Pybullet"
+    engine_mode = "Ode"
     # Create crazyflie object
     urdf_path = os.path.dirname(Crazyflie_Simulation.__file__) + "/solid/assets/"
 
@@ -106,12 +106,12 @@ if __name__ == "__main__":
         graph.add(crazyflie)
 
         # Connecting observations
-        graph.connect(source=crazyflie.sensors.orientation, observation="orientation")
         graph.connect(source=crazyflie.sensors.pos, observation="position")
+        graph.connect(source=crazyflie.sensors.orientation, observation="orientation")
 
         # Connecting actions
-        graph.connect(action="desired_attitude", target=crazyflie.actuators.commanded_attitude)
         graph.connect(action="desired_thrust", target=crazyflie.actuators.commanded_thrust)
+        graph.connect(action="desired_attitude", target=crazyflie.actuators.commanded_attitude)
         # - - - - - - - ODE END - - - - - - -
     else:
         raise "Wrong engine_mode selected. Please choose between Pybullet and Ode"
@@ -133,7 +133,7 @@ if __name__ == "__main__":
         # Connect joint output to safety filter
 
     # Show in the gui
-    # graph.gui()
+    graph.gui()
 
     # Define engines
     # engine = Engine.make("RealEngine", rate=rate, sync=True, process=process.NEW_PROCESS)
