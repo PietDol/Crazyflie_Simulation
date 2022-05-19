@@ -33,7 +33,7 @@ if __name__ == "__main__":
     # Initialize empty graph
     graph = Graph.create()
 
-    engine_mode = "Ode"
+    engine_mode = "Ode" #select whether you want to use Pybullet or the Ode bridge
     # Create crazyflie object
     urdf_path = os.path.dirname(Crazyflie_Simulation.__file__) + "/solid/assets/"
 
