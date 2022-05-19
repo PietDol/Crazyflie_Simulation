@@ -25,8 +25,10 @@ def crazyflie_ode(x, t, u, mass, gain_constant, time_constant):
     pwm_drag = force_to_pwm(force)  # Symbolic PWM to approximate rotor drag
     dragxy = 9.1785e-7 * 4 * (0.04076521 * pwm_drag + 380.8359)  # Fa,xy
     dragz = 10.311e-7 * 4 * (0.04076521 * pwm_drag + 380.8359)  # Fa,z
-    phi_commanded = u[1] * pi / 6  # Commanded phi in radians
-    theta_commanded = u[2] * pi / 6  # Commanded theta in radians
+    # phi_commanded = u[1] * pi / 6  # Commanded phi in radians
+    # theta_commanded = u[2] * pi / 6  # Commanded theta in radians
+    phi_commanded = u[1] * pi / 180  # Commanded phi in radians
+    theta_commanded = u[2] * pi / 180  # Commanded theta in radians
     dx = [x[3],  # x_dot
           x[4],  # y_dot
           x[5],  # z_dot
