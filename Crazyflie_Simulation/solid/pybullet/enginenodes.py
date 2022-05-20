@@ -229,7 +229,6 @@ class PowerDistribution(EngineNode):
         # new_pwm_signal = np.array([3,3,0])
         return dict(pwm_signal=Float32MultiArray(data=new_pwm_signal))
 
-
 class ForceController(EngineNode):
     @staticmethod
     @register.spec("ForceController", EngineNode)
@@ -386,7 +385,6 @@ class ForceController(EngineNode):
 
         return dict(action_applied=action_applied)
 
-
 class AccelerometerSensor(EngineNode):
     @staticmethod
     @register.spec("AccelerometerSensor", EngineNode)
@@ -415,7 +413,7 @@ class AccelerometerSensor(EngineNode):
         spec.config.name = name
         spec.config.rate = rate
         spec.config.process = process
-        spec.config.inputs = ["tick", "input_force"]
+        spec.config.inputs = ["tick", "input_velocity"]
         spec.config.outputs = ["obs"]
 
     def initialize(self):
@@ -426,19 +424,19 @@ class AccelerometerSensor(EngineNode):
         """This link sensor is stateless, so nothing happens here."""
         pass
 
-    @register.inputs(tick=UInt64, input_force=Float32MultiArray)
+    @register.inputs(tick=UInt64, input_velocity=Float32MultiArray)
     @register.outputs(obs=Float32MultiArray)
-    def callback(self, t_n: float, input_force: Msg, tick: Optional[Msg] = None):
+    def callback(self, t_n: float, input_velocity: Msg, tick: Optional[Msg] = None):
         """Produces a link sensor measurement called `obs`.
 
         The measurement is published at the specified rate * real_time_factor.
 
         Input `tick` ensures that this node is I/O synchronized with the simulator."""
         # get last and current velocity
-        last = np.array(input_force.msgs[0].data)
+        last = np.array(input_velocity.msgs[0].data)
         # print("last", last) # debug
         try:
-            current = np.array(input_force.msgs[1].data)
+            current = np.array(input_velocity.msgs[1].data)
         except:
             current = np.array([0, 0, 0])
         # print("current", current) # debug
@@ -449,6 +447,54 @@ class AccelerometerSensor(EngineNode):
         # print("acceleration", diff)       # debug
         # print("=" * 50)                   # debug
         return dict(obs=Float32MultiArray(data=diff))
+
+class StateEstimator(eagerx.EngineNode):
+    @staticmethod
+    @eagerx.register.spec("StateEstimator", EngineNode)
+    def spec(
+            spec,
+            name: str,
+            rate: float,
+            n: int,
+    ):
+        # Performs all the steps to fill-in the params with registered info about all functions.
+        spec.initialize(StateEstimator)
+
+        # Modify default node params
+        spec.config.name = name
+        spec.config.rate = rate
+        spec.config.process = eagerx.process.ENVIRONMENT
+        spec.config.inputs = ["angular_velocity", "acceleration", "orientation"]
+        spec.config.outputs = ["orientation"]
+
+        # Add space converters
+        spec.inputs.angular_velocity.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
+                                                                                  [0, 0, 0],
+                                                                                  [3, 3, 3], dtype="float32")
+        spec.inputs.acceleration.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
+                                                                              [0, 0, 0],
+                                                                              [3, 3, 3], dtype="float32")
+        spec.inputs.orientation.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
+                                                                             [0, 0, 0],
+                                                                             [3, 3, 3], dtype="float32")
+        spec.outputs.orientation.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
+                                                                              [0, 0, 0],
+                                                                              [3, 3, 3], dtype="float32")
+
+    def initialize(self):
+        pass
+
+    @eagerx.register.states()
+    def reset(self):
+        pass
+
+    @eagerx.register.inputs(angular_velocity=Float32MultiArray, acceleration=Float32MultiArray,
+                            orientation=Float32MultiArray)
+    @eagerx.register.outputs(orientation=Float32MultiArray)
+    def callback(self, t_n: float, angular_velocity: Msg, acceleration: Msg, orientation: Msg):
+        # attitude = orientation.msgs[-1].data
+        attitude = [0,0,0,1]
+        return dict(orientation=Float32MultiArray(data=attitude))
 
 class FloatMultiArrayOutput(EngineNode):
     @staticmethod
@@ -552,7 +598,6 @@ class OdeMultiInput(EngineNode):
         # Send action that has been applied.
         # return dict(action_applied=action_applied)
         return dict(action_applied=Float32MultiArray(data=action_applied))
-
 
 # class LinkSensor(EngineNode):
 #     @staticmethod
