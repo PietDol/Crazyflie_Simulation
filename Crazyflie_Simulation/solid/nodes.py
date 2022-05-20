@@ -43,19 +43,39 @@ class MakePicture(eagerx.Node):
         #                                                                       [3, 3, 3], dtype="float32")
 
     def initialize(self):
-        self.modulus_prev = 1000
-        self.final_image = 0
-        self.save_render_image = True
+        #set render settings
+        self.save_render_image = False # enable or disable render from 2D plot
+        self.saveToPreviousRender = False # saves render on top of last render
+        self.renderColor = "red" # blue, red or black for now
         self.axis_to_plot = 'x' # 'x' or 'y' right now
-        self.height = 880
-        self.width = 880
+        self.height = 880 # set render height
+        self.width = 880 # set render width
         self.offset = 40  # offset of the picture from the sides
-        self.timestep = 0.1
-        self.sample_length = 2
+        self.timestep = 0.1 # set timestep for render
+        self.sample_length = 2 # set length of render
         self.length = 10
         self.text_height = 4
-        self.arm_length = 0.028 * 5
         self.font = cv2.FONT_HERSHEY_PLAIN
+
+        # set drone arm lengths
+        self.arm_length = 0.028 * 5
+
+        self.modulus_prev = 1000
+        if self.saveToPreviousRender == True:
+            self.final_image = cv2.imread(f'../Crazyflie_Simulation/solid/Rendering/Images/final_image.png')
+        else:
+            self.final_image = 0
+
+        #init render color
+        if self.renderColor == "blue":
+            self.renderColor = [255, 0, 0]
+        elif self.renderColor == "red":
+            self.renderColor = [0, 0, 255]
+        elif self.renderColor == "black":
+            self.renderColor = [0, 0, 0]
+        else:
+            self.renderColor = [255, 0, 0]
+
 
     @eagerx.register.states()
     def reset(self):
@@ -103,13 +123,13 @@ class MakePicture(eagerx.Node):
             x_correction = self.arm_length * np.cos(-pitch)
             # print(f'pitch is: {-pitch*180/np.pi} degrees')
             img = cv2.circle(img, (int((pos_x + x_correction) * 200) // 1 + self.width // 2,
-                                   self.height - int((pos_z + z_correction) * 200 // 1) - self.offset), 5, (255, 0, 0), -1)
+                                   self.height - int((pos_z + z_correction) * 200 // 1) - self.offset), 5, self.renderColor, -1)
             img = cv2.circle(img, (int((pos_x - x_correction) * 200) // 1 + self.width // 2,
-                                   self.height - int((pos_z - z_correction) * 200 // 1) - self.offset), 5, (255, 0, 0), -1)
+                                   self.height - int((pos_z - z_correction) * 200 // 1) - self.offset), 5, self.renderColor, -1)
             img = cv2.line(img, (int((pos_x + x_correction) * 200) // 1 + self.width // 2,
                                  self.height - int((pos_z + z_correction) * 200 // 1) - self.offset),
                            (int((pos_x - x_correction) * 200) // 1 + self.width // 2,
-                            self.height - int((pos_z - z_correction) * 200 // 1) - self.offset), (255, 0, 0), 2)
+                            self.height - int((pos_z - z_correction) * 200 // 1) - self.offset), self.renderColor, 2)
             return img
 
         def plot_y(img):

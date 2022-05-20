@@ -202,7 +202,7 @@ if __name__ == "__main__":
 
             action = env.action_space.sample()
             action["desired_attitude"][0] = 0  # Roll
-            action["desired_attitude"][1] = 10  # Pitch
+            action["desired_attitude"][1] = -10  # Pitch
             action["desired_attitude"][2] = 0  # Yaw
             try:
                 action["desired_thrust"][0] = desired_thrust_pid.next_action(current=obs["position"][0][2],
