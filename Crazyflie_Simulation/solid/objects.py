@@ -26,7 +26,7 @@ class Crazyflie(Object):
         lateral_friction=Float32,
         model_state=Float32MultiArray,
     )
-    @register.actuators(pwm_input=Float32MultiArray, commanded_thrust=Float32MultiArray,
+    @register.actuators(pwm_input=Float32MultiArray, desired_thrust = Float32MultiArray, desired_attitude = Float32MultiArray,  commanded_thrust=Float32MultiArray,
                         commanded_attitude=Float32MultiArray)
     @register.config(urdf=None, fixed_base=True, self_collision=True, base_pos=[0, 0, 0], base_or=[0, 0, 0, 1])
     def agnostic(spec: ObjectSpec, rate):
@@ -188,6 +188,7 @@ class Crazyflie(Object):
     @staticmethod
     @register.engine(entity_id, PybulletEngine)
     def pybullet_engine(spec: ObjectSpec, graph: EngineGraph):
+        # todo: fix the rates!!
         """Engine-specific implementation (Pybullet) of the object."""
         # Import any object specific entities for this engine
         import Crazyflie_Simulation.solid.pybullet  # noqa # pylint: disable=unused-import
@@ -220,6 +221,16 @@ class Crazyflie(Object):
         accelerometer = EngineNode.make(
             "AccelerometerSensor", "accelerometer", rate=spec.sensors.accelerometer.rate, process=2
         )
+
+        attitude_pid = EngineNode.make(
+            "AttitudePID", "attitude_pid", rate = 220, n = 3)
+
+        attitude_rate_pid = EngineNode.make(
+            "AttitudeRatePID", "attitude_rate_pid", rate=220, n=3
+        )
+        power_distribution = EngineNode.make(
+            "PowerDistribution", "power_distribution", rate=220, n=3
+        )
         # Create actuator engine nodes
         # Rate=None, but we will connect it to an actuator (thus will use the rate set in the agnostic specification)
         external_force = EngineNode.make(
@@ -228,7 +239,7 @@ class Crazyflie(Object):
         )
 
         # Connect all engine nodes
-        graph.add([pos, vel, orientation, gyroscope, accelerometer, external_force])
+        graph.add([pos, vel, orientation, gyroscope, accelerometer, attitude_pid, attitude_rate_pid, power_distribution, external_force])
         # graph.connect(source=external_force.outputs.action_applied, target=accelerometer.inputs.input_force, skip=True)
         graph.connect(source=vel.outputs.obs, target=accelerometer.inputs.input_force, window=2)
         graph.connect(source=pos.outputs.obs, sensor="pos")
@@ -236,9 +247,14 @@ class Crazyflie(Object):
         graph.connect(source=orientation.outputs.obs, sensor="orientation")
         graph.connect(source=gyroscope.outputs.obs, sensor="gyroscope")
         graph.connect(source=accelerometer.outputs.obs, sensor="accelerometer")
-        graph.connect(actuator="pwm_input", target=external_force.inputs.action)
-
-        # graph.gui()
+        graph.connect(actuator="commanded_attitude", target=attitude_pid.inputs.desired_attitude)
+        graph.connect(source=orientation.outputs.obs, target=attitude_pid.inputs.current_attitude)
+        graph.connect(source=gyroscope.outputs.obs, target=attitude_rate_pid.inputs.current_rate)
+        graph.connect(source=attitude_pid.outputs.new_attitude_rate, target=attitude_rate_pid.inputs.desired_rate)
+        graph.connect(actuator="commanded_thrust", target=power_distribution.inputs.desired_thrust)
+        graph.connect(source=attitude_rate_pid.outputs.new_motor_control, target=power_distribution.inputs.calculated_control)
+        graph.connect(source=power_distribution.outputs.pwm_signal, target=external_force.inputs.action)
+        graph.gui()
 
         # Check graph validity (commented out)
         # graph.is_valid(plot=True)

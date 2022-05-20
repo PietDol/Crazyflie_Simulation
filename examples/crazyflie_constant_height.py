@@ -33,7 +33,7 @@ if __name__ == "__main__":
     # Initialize empty graph
     graph = Graph.create()
 
-    engine_mode = "Ode" #select whether you want to use Pybullet or the Ode bridge
+    engine_mode = "Pybullet" #select whether you want to use Pybullet or the Ode bridge
     # Create crazyflie object
     urdf_path = os.path.dirname(Crazyflie_Simulation.__file__) + "/solid/assets/"
 
@@ -42,7 +42,7 @@ if __name__ == "__main__":
         crazyflie = eagerx.Object.make(
             "Crazyflie", "crazyflie", urdf=urdf_path + "cf2x.urdf", rate=rate,
             sensors=["pos", "vel", "orientation", "gyroscope", "accelerometer"],
-            actuators=["pwm_input"],
+            actuators=["commanded_thrust", "commanded_attitude"],
             base_pos=[0, 0, 1], fixed_base=False,
             states=["pos", "vel", "orientation", "angular_vel"]
         )
@@ -53,28 +53,28 @@ if __name__ == "__main__":
         graph.add(crazyflie)
 
         # Add attitude PID node to graph
-        attitude_pid = eagerx.Node.make(
-            "AttitudePID", "attitude_pid", rate=rate, n=3
-        )
-        graph.add(attitude_pid)
-
-        # Add attitude rate PID node to graph
-        attitude_rate_pid = eagerx.Node.make(
-            "AttitudeRatePID", "attitude_rate_pid", rate=rate, n=3
-        )
-        graph.add(attitude_rate_pid)
-
-        # Add power distribution
-        power_distribution = eagerx.Node.make(
-            "PowerDistribution", "power_distribution", rate=rate, n=3
-        )
-        graph.add(power_distribution)
-
-        # Add state estimator
-        state_estimator = eagerx.Node.make(
-            "StateEstimator", "state_estimator", rate=rate, n=3
-        )
-        graph.add(state_estimator)
+        # attitude_pid = eagerx.Node.make(
+        #     "AttitudePID", "attitude_pid", rate=rate, n=3
+        # )
+        # graph.add(attitude_pid)
+        #
+        # # Add attitude rate PID node to graph
+        # attitude_rate_pid = eagerx.Node.make(
+        #     "AttitudeRatePID", "attitude_rate_pid", rate=rate, n=3
+        # )
+        # graph.add(attitude_rate_pid)
+        #
+        # # Add power distribution
+        # power_distribution = eagerx.Node.make(
+        #     "PowerDistribution", "power_distribution", rate=rate, n=3
+        # )
+        # graph.add(power_distribution)
+        #
+        # # Add state estimator
+        # state_estimator = eagerx.Node.make(
+        #     "StateEstimator", "state_estimator", rate=rate, n=3
+        # )
+        # graph.add(state_estimator)
 
         # Connecting observations
         graph.connect(source=crazyflie.sensors.orientation, observation="orientation")
@@ -82,17 +82,17 @@ if __name__ == "__main__":
 
         # Connecting actions
         # graph.connect(action="external_force", target=solid.actuators.external_force)
-        graph.connect(action="desired_attitude", target=attitude_pid.inputs.desired_attitude)
-        graph.connect(action="desired_thrust", target=power_distribution.inputs.desired_thrust)
-        graph.connect(source=attitude_pid.outputs.new_attitude_rate, target=attitude_rate_pid.inputs.desired_rate)
-        graph.connect(source=attitude_rate_pid.outputs.new_motor_control,
-                      target=power_distribution.inputs.calculated_control)
-        graph.connect(source=power_distribution.outputs.pwm_signal, target=crazyflie.actuators.pwm_input)
-        graph.connect(source=crazyflie.sensors.gyroscope, target=state_estimator.inputs.angular_velocity)
-        graph.connect(source=crazyflie.sensors.gyroscope, target=attitude_rate_pid.inputs.current_rate)
-        graph.connect(source=crazyflie.sensors.accelerometer, target=state_estimator.inputs.acceleration)
-        graph.connect(source=crazyflie.sensors.orientation, target=state_estimator.inputs.orientation)
-        graph.connect(source=state_estimator.outputs.orientation, target=attitude_pid.inputs.current_attitude)
+        graph.connect(action="desired_attitude", target=crazyflie.actuators.commanded_attitude)
+        graph.connect(action="desired_thrust", target=crazyflie.actuators.commanded_thrust)
+        # graph.connect(source=attitude_pid.outputs.new_attitude_rate, target=attitude_rate_pid.inputs.desired_rate)
+        # graph.connect(source=attitude_rate_pid.outputs.new_motor_control,
+        #               target=power_distribution.inputs.calculated_control)
+        # graph.connect(source=power_distribution.outputs.pwm_signal, target=crazyflie.actuators.pwm_input)
+        # graph.connect(source=crazyflie.sensors.gyroscope, target=state_estimator.inputs.angular_velocity)
+        # graph.connect(source=crazyflie.sensors.gyroscope, target=attitude_rate_pid.inputs.current_rate)
+        # graph.connect(source=crazyflie.sensors.accelerometer, target=state_estimator.inputs.acceleration)
+        # graph.connect(source=crazyflie.sensors.orientation, target=state_estimator.inputs.orientation)
+        # graph.connect(source=state_estimator.outputs.orientation, target=attitude_pid.inputs.current_attitude)
         # - - - - - - - PYBULLET END - - - - - - -
     elif engine_mode == "Ode":
         # - - - - - - - ODE START - - - - - - -
@@ -133,7 +133,8 @@ if __name__ == "__main__":
         # Connect joint output to safety filter
 
     # Show in the gui
-    graph.gui()
+    # graph.gui()
+
 
     # Define engines
     # engine = Engine.make("RealEngine", rate=rate, sync=True, process=process.NEW_PROCESS)
