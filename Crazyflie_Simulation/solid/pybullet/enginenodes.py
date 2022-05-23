@@ -387,7 +387,7 @@ class ForceController(EngineNode):
         action_to_apply = action.msgs[-1]
         # action_applied.data = np.array([40000, 40000, 40000, 40000])  # debug
         total_force = self.force_cb(action_to_apply.data)
-        print(total_force)
+        # print(total_force)
         self.torque_cb(total_force)
 
         return dict(action_applied=action_to_apply)

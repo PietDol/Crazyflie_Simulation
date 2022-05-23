@@ -36,8 +36,11 @@ if __name__ == "__main__":
     # Set URDF path
     urdf_path = os.path.dirname(Crazyflie_Simulation.__file__) + "/solid/assets/"
 
+    # Create PID node
+    pid_height = eagerx.Node.make("PIDNode", "pid_height", rate=48)
+
     # - - - - - - - CHOOSE ENGINE MODE HERE - - - - - - -
-    engine_mode = "Pybullet" # choose between Pybullet and Ode (bridge select)
+    engine_mode = "Pybullet"  # choose between Pybullet and Ode (bridge select)
 
     if engine_mode == "Pybullet":
         # - - - - - - - PYBULLET START - - - - - - -
@@ -58,7 +61,8 @@ if __name__ == "__main__":
 
         # Define engine
         # engine = Engine.make("RealEngine", rate=rate, sync=True, process=process.NEW_PROCESS)
-        engine = eagerx.Engine.make("PybulletEngine", rate=safe_rate, gui=True, egl=True, sync=True, real_time_factor=0.0)
+        engine = eagerx.Engine.make("PybulletEngine", rate=safe_rate, gui=True, egl=True, sync=True,
+                                    real_time_factor=0.0)
         # - - - - - - - PYBULLET END - - - - - - -
     elif engine_mode == "Ode":
         # - - - - - - - ODE START - - - - - - -
@@ -84,12 +88,16 @@ if __name__ == "__main__":
     # Create agnostic graph
     graph.add(make_picture)
     graph.add(crazyflie)
+    # graph.add(pid_height)
     # Connect Crazyflie inputs
     graph.connect(action="desired_attitude", target=crazyflie.actuators.commanded_attitude)
     graph.connect(action="desired_thrust", target=crazyflie.actuators.commanded_thrust)
+    # graph.connect(action="desired_height", target=pid_height.inputs.desired_height)
+    # graph.connect(source=pid_height.outputs.new_action, target=crazyflie.actuators.commanded_thrust)
     # Connect Crazyflie outputs
     graph.connect(source=crazyflie.sensors.orientation, observation="orientation")
     graph.connect(source=crazyflie.sensors.pos, observation="position")
+    # graph.connect(source=crazyflie.sensors.orientation, target=pid_height.inputs.current_height)
     # Connect picture making node
     graph.connect(source=crazyflie.sensors.orientation, target=make_picture.inputs.orientation)
     graph.connect(source=crazyflie.sensors.pos, target=make_picture.inputs.position)
@@ -99,6 +107,7 @@ if __name__ == "__main__":
     if real_reset:
         # Connect target state we are resetting
         graph.connect(action="pwm_input", target=crazyflie.actuators)
+
 
     # Show in the gui
     # graph.gui()
@@ -127,6 +136,7 @@ if __name__ == "__main__":
         done = False
         return obs, rwd, done, info
 
+
     # Define reset function
     def reset_fn(env):
         states = env.state_space.sample()
@@ -143,6 +153,15 @@ if __name__ == "__main__":
 
         return states
 
+    def force_to_pwm(force):
+        # Just the inversion of pwm_to_force
+        a = 4 * 2.130295e-11
+        b = 4 * 1.032633e-6
+        c = 5.485e-4 - force
+        d = b ** 2 - 4 * a * c
+        pwm = (-b + np.sqrt(d)) / (2 * a)
+        return pwm
+
     # Initialize Environment
     env = EagerxEnv(name="rx", rate=rate, graph=graph, engine=engine, step_fn=step_fn, reset_fn=reset_fn, exclude=[])
 
@@ -153,19 +172,22 @@ if __name__ == "__main__":
     for eps in range(5000):
         print(f"Episode {eps}")
         _, done = env.reset(), False
-        desired_altitude = 1
+        desired_altitude = 2
+        desired_thrust_pid = PID(kp=0.2, ki=0.0001, kd=0.4, rate=rate)  # kp 10000 ki 50 kd 2500000
         while not done:
-            desired_thrust_pid = PID(kp=10000, ki=50, kd=2500000, rate=rate)  # kp 10000 ki 50 kd 2500000
 
             action = env.action_space.sample()
             action["desired_attitude"][0] = 0  # Roll
             action["desired_attitude"][1] = 0  # Pitch
-            action["desired_attitude"][2] = 45  # Yaw
+            action["desired_attitude"][2] = 0  # Yaw
+            # action["desired_height"] = np.array([desired_altitude])
             try:
-                action["desired_thrust"][0] = desired_thrust_pid.next_action(current=obs["position"][0][2],
-                                                                             desired=desired_altitude)
+                action["desired_thrust"][0] = force_to_pwm(
+                    0.027 * 9.81 + desired_thrust_pid.next_action(current=obs["position"][0][2],
+                                                                  desired=desired_altitude))
             except:
-                action["desired_thrust"][0] = desired_thrust_pid.next_action(current=0, desired=desired_altitude)
+                action["desired_thrust"][0] = force_to_pwm(0.027 * 9.81 + desired_thrust_pid.next_action(current=1,
+                                                                                                         desired=desired_altitude))
             action["desired_thrust"][0] = np.clip(action["desired_thrust"][0], 10000, 60000)
             # action["desired_thrust"][0] = 36100
             obs, reward, done, info = env.step(action)

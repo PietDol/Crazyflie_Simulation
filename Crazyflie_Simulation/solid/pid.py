@@ -1,13 +1,19 @@
+import numpy as np
+
+
 class PID:
-    def __init__(self, kp, ki, kd, rate):
+    def __init__(self, kp, ki, kd, rate, limit=5000):
         self.kp = kp
         self.ki = ki
         self.kd = kd
         self.rate = rate
         self.prev_error = 0
+        self.integ = 0
+        self.limit = limit
 
     def reset(self):
         self.prev_error = 0
+        self.integ = 0
 
     def update_pid(self, current, desired):
         self.current = current
@@ -21,8 +27,8 @@ class PID:
         return self.kp * self.error
 
     def calc_integral(self):
-        integ = self.error * (1 / self.rate)
-        return self.ki * integ
+        self.integ += self.ki * self.error * (1 / self.rate)
+        return np.clip(self.integ, -self.limit, self.limit)
 
     def calc_deriv(self):
         deriv = (self.error - self.prev_error) / (1 / self.rate)

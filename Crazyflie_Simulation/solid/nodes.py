@@ -40,16 +40,16 @@ class MakePicture(eagerx.Node):
                                                                              [3, 3, 3], dtype="float32")
 
     def initialize(self):
-        #set render settings
-        self.save_render_image = False # enable or disable render from 2D plot
-        self.saveToPreviousRender = False # saves render on top of last render
-        self.renderColor = "black" # blue, red or black for now
-        self.axis_to_plot = 'x' # 'x' or 'y' right now
-        self.height = 880 # set render height
-        self.width = 880 # set render width
+        # set render settings
+        self.save_render_image = False  # enable or disable render from 2D plot
+        self.saveToPreviousRender = False  # saves render on top of last render
+        self.renderColor = "black"  # blue, red or black for now
+        self.axis_to_plot = 'x'  # 'x' or 'y' right now
+        self.height = 880  # set render height
+        self.width = 880  # set render width
         self.offset = 40  # offset of the picture from the sides
-        self.timestep = 0.1 # set timestep for render
-        self.sample_length = 2 # set length of render
+        self.timestep = 0.1  # set timestep for render
+        self.sample_length = 2  # set length of render
         self.length = 10
         self.text_height = 4
         self.font = cv2.FONT_HERSHEY_PLAIN
@@ -63,7 +63,7 @@ class MakePicture(eagerx.Node):
         else:
             self.final_image = 0
 
-        #init render color
+        # init render color
         if self.renderColor == "blue":
             self.renderColor = [255, 0, 0]
         elif self.renderColor == "red":
@@ -79,7 +79,6 @@ class MakePicture(eagerx.Node):
 
     @eagerx.register.inputs(position=Float32MultiArray, orientation=Float32MultiArray)
     @eagerx.register.outputs(image=Image)
-
     def callback(self, t_n: float, position: Msg, orientation: Msg):
         pos_x, pos_y, pos_z = position.msgs[-1].data[0], position.msgs[-1].data[1], position.msgs[-1].data[2]
 
@@ -103,11 +102,13 @@ class MakePicture(eagerx.Node):
             x_axis = np.linspace(2, -2, 9)
             x = self.width - i * 100 - self.offset
             y = self.height - self.offset
-            img = cv2.line(img, (x, self.height - self.offset), (x, self.height - self.offset + self.length), (0, 0, 0), 1)  # make markers on x-axis
+            img = cv2.line(img, (x, self.height - self.offset), (x, self.height - self.offset + self.length), (0, 0, 0),
+                           1)  # make markers on x-axis
             img = cv2.putText(img, str(x_axis[i]), (x - self.text_height * 4, y + 25), self.font, 1, (0, 0, 0))
 
         #  create border
-        img = cv2.rectangle(img, (self.offset, self.offset), (self.height - self.offset, self.width - self.offset), (0, 0, 0), 1)
+        img = cv2.rectangle(img, (self.offset, self.offset), (self.height - self.offset, self.width - self.offset),
+                            (0, 0, 0), 1)
 
         # give the sampled image an axis like for the render image
         if type(self.final_image) is int:
@@ -119,9 +120,11 @@ class MakePicture(eagerx.Node):
             x_correction = self.arm_length * np.cos(-pitch)
             # print(f'pitch is: {-pitch*180/np.pi} degrees')
             img = cv2.circle(img, (int((pos_x + x_correction) * 200) // 1 + self.width // 2,
-                                   self.height - int((pos_z + z_correction) * 200 // 1) - self.offset), 5, self.renderColor, -1)
+                                   self.height - int((pos_z + z_correction) * 200 // 1) - self.offset), 5,
+                             self.renderColor, -1)
             img = cv2.circle(img, (int((pos_x - x_correction) * 200) // 1 + self.width // 2,
-                                   self.height - int((pos_z - z_correction) * 200 // 1) - self.offset), 5, self.renderColor, -1)
+                                   self.height - int((pos_z - z_correction) * 200 // 1) - self.offset), 5,
+                             self.renderColor, -1)
             img = cv2.line(img, (int((pos_x + x_correction) * 200) // 1 + self.width // 2,
                                  self.height - int((pos_z + z_correction) * 200 // 1) - self.offset),
                            (int((pos_x - x_correction) * 200) // 1 + self.width // 2,
@@ -133,15 +136,18 @@ class MakePicture(eagerx.Node):
             z_correction = self.arm_length * np.sin(roll)
             y_correction = self.arm_length * np.cos(roll)
             img = cv2.circle(img, (int((pos_y + y_correction) * 200) // 1 + self.width // 2,
-                                   self.height - int((pos_z + z_correction) * 200 // 1) - self.offset), 5, (255, 0, 0), -1)
+                                   self.height - int((pos_z + z_correction) * 200 // 1) - self.offset), 5, (255, 0, 0),
+                             -1)
             img = cv2.circle(img, (int((pos_y - y_correction) * 200) // 1 + self.width // 2,
-                                   self.height - int((pos_z - z_correction) * 200 // 1) - self.offset), 5, (255, 0, 0), -1)
+                                   self.height - int((pos_z - z_correction) * 200 // 1) - self.offset), 5, (255, 0, 0),
+                             -1)
             img = cv2.line(img, (int((pos_y + y_correction) * 200) // 1 + self.width // 2,
                                  self.height - int((pos_z + z_correction) * 200 // 1) - self.offset),
                            (int((pos_y - y_correction) * 200) // 1 + self.width // 2,
                             self.height - int((pos_z - z_correction) * 200 // 1) - self.offset), (255, 0, 0), 2)
             return img
-        #checks which axis is selected to plot
+
+        # checks which axis is selected to plot
         if self.axis_to_plot == 'x':
             img = plot_x(img)
         elif self.axis_to_plot == 'y':
@@ -164,6 +170,69 @@ class MakePicture(eagerx.Node):
         msg = Image(data=data, height=self.height, width=self.width, encoding="bgr8", step=3 * self.width)
         # print(type(msg))
         return dict(image=msg)
+
+
+class PIDNode(eagerx.Node):
+    @staticmethod
+    @eagerx.register.spec("PIDNode", eagerx.Node)
+    def spec(
+            spec,
+            name: str,
+            rate: float,
+    ):
+        # Modify default node params
+        spec.config.name = name
+        spec.config.rate = rate
+        spec.config.process = eagerx.process.ENVIRONMENT
+        spec.config.inputs = ["current_height", "desired_height"]
+        spec.config.outputs = ["new_action"]
+
+        # Add space converters
+        spec.inputs.current_height.space_converter = eagerx.SpaceConverter.make(
+            "Space_Float32MultiArray",
+            dtype="float32",
+            low=[-1000, -1000, 0],
+            high=[1000, 1000, 1000],
+        )
+
+        spec.inputs.desired_height.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
+                                                                             [0],
+                                                                             [65535], dtype="float32")
+
+        spec.outputs.new_action.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
+                                                                             [0],
+                                                                             [65535], dtype="float32")
+
+    def initialize(self):
+        # Define values for kp, ki, kd
+        self.kp = 0.2
+        self.ki = 0.0001
+        self.kd = 0.4
+        self.pid = PID(kp=self.kp, ki=self.ki, kd=self.kd, rate=self.rate)
+
+    @eagerx.register.states()
+    def reset(self):
+        self.pid.reset()
+
+    # Force to PWM
+    @staticmethod
+    def force_to_pwm(force):
+        # Just the inversion of pwm_to_force
+        a = 4 * 2.130295e-11
+        b = 4 * 1.032633e-6
+        c = 5.485e-4 - force
+        d = b ** 2 - 4 * a * c
+        pwm = (-b + np.sqrt(d)) / (2 * a)
+        return pwm
+
+    @eagerx.register.inputs(current_height=Float32MultiArray, desired_height=Float32MultiArray)
+    @eagerx.register.outputs(new_action=Float32MultiArray)
+    def callback(self, t_n: float, current_height: Msg, desired_height: Msg):
+        gravity = 0.027 * 9.81
+        next_force = gravity + self.pid.next_action(current=current_height.msgs[-1].data[2],
+                                                    desired=desired_height.msgs[-1].data[0])
+        next_pwm = np.clip(self.force_to_pwm(next_force), 10000, 60000)
+        return dict(new_action=Float32MultiArray(data=np.array([next_pwm])))
 
 # class AttitudePID(eagerx.Node):
 #     @staticmethod
@@ -425,4 +494,3 @@ class MakePicture(eagerx.Node):
 #     def callback(self, t_n: float, angular_velocity: Msg, acceleration: Msg, orientation: Msg):
 #         attitude = orientation.msgs[-1].data
 #         return dict(orientation=Float32MultiArray(data=attitude))
-
