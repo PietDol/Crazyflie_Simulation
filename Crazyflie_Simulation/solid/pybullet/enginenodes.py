@@ -333,6 +333,7 @@ class ForceController(EngineNode):
                 #     posObj=(0, 0, 0),
                 #     flags=p.LINK_FRAME,
                 # )
+                return forces
         elif mode == "torque_control":
             # based on coordinate system: https://www.bitcraze.io/documentation/system/platform/cf2-coordinate-system/
             # motor numbers: https://www.bitcraze.io/documentation/hardware/crazyflie_2_1/crazyflie_2_1-datasheet.pdf
@@ -342,27 +343,22 @@ class ForceController(EngineNode):
             arm_4 = np.array([0.028, 0.028, 0])
             arms = np.array([arm_1, arm_2, arm_3, arm_4])
 
-            def cb(action):
-                pwm = action[:4]
-                forces = np.zeros(len(pwm))
-                torques_pitchroll = np.zeros((len(pwm), 3))
-                torques_yaw = np.zeros((len(pwm), 3))
+            def cb(forces):
+                torques_pitchroll = np.zeros((len(forces), 3))
+                torques_yaw = np.zeros((len(forces), 3))
                 torques_yaw_direction = np.array([1, -1, 1, -1])
                 total_torque = np.array([0, 0, 0])
-                for idx, pwm in enumerate(pwm):
-                    # Calculate total force
-                    force = (2.130295e-11) * (pwm) ** 2 + (1.032633e-6) * pwm + 5.484560e-4
-                    forces[idx] = force
-
+                for idx, force in enumerate(forces):
                     # Calculate torques from upward forces
                     torques_pitchroll[idx] = np.cross(arms[idx], np.array([0, 0, force]))
 
-                    # Calculate torques from yaw
-                    torque = 0.005964552 * force + 1.563383E-5
-                    torques_yaw[idx] = np.array([0, 0, torques_yaw_direction[idx] * torque])
+                    # Calculate torques from yaw input
+                    torque_yaw = 0.005964552 * force + 1.563383E-5
+                    torques_yaw[idx] = np.array([0, 0, torques_yaw_direction[idx] * torque_yaw])
 
                     # Add up all torques
                     total_torque = total_torque + torques_pitchroll[idx] + torques_yaw[idx]
+
                 # print(f"Torque: {total_torque}")  # debug
                 p.applyExternalTorque(
                     objectUniqueId=objectUniqueId,
@@ -373,7 +369,6 @@ class ForceController(EngineNode):
                 )
         else:
             raise ValueError(f"Mode '{mode}' not recognized.")
-        # todo: add yaw torque
         return cb
 
     @register.states()
@@ -389,12 +384,13 @@ class ForceController(EngineNode):
         The measurement is published at the specified rate * real_time_factor.
 
         Input `tick` ensures that this node is I/O synchronized with the simulator."""
-        action_applied = action.msgs[-1]
+        action_to_apply = action.msgs[-1]
         # action_applied.data = np.array([40000, 40000, 40000, 40000])  # debug
-        self.force_cb(action_applied.data)
-        self.torque_cb(action_applied.data)
+        total_force = self.force_cb(action_to_apply.data)
+        print(total_force)
+        self.torque_cb(total_force)
 
-        return dict(action_applied=action_applied)
+        return dict(action_applied=action_to_apply)
 
 class AccelerometerSensor(EngineNode):
     @staticmethod
