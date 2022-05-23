@@ -181,7 +181,7 @@ class Crazyflie(Object):
         spec.config.name = name
         spec.config.sensors = sensors if sensors is not None else ["pos", "vel", "orientation", "gyroscope",
                                                                    "accelerometer", "state_estimator"]
-        spec.config.states = states if states is not None else ["pos", "vel", "orientation", "angular_vel"]
+        spec.config.states = states if states is not None else ["pos", "vel", "orientation", "angular_vel", "model_state"]
         spec.config.actuators = actuators if actuators is not None else []  # ["external_force"]
 
         # Add registered agnostic params

@@ -38,15 +38,12 @@ class MakePicture(eagerx.Node):
         spec.inputs.orientation.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
                                                                              [0, 0, 0],
                                                                              [3, 3, 3], dtype="float32")
-        # spec.outputs.image.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
-        #                                                                       [0, 0, 0],
-        #                                                                       [3, 3, 3], dtype="float32")
 
     def initialize(self):
         #set render settings
         self.save_render_image = False # enable or disable render from 2D plot
         self.saveToPreviousRender = False # saves render on top of last render
-        self.renderColor = "red" # blue, red or black for now
+        self.renderColor = "black" # blue, red or black for now
         self.axis_to_plot = 'x' # 'x' or 'y' right now
         self.height = 880 # set render height
         self.width = 880 # set render width
@@ -75,7 +72,6 @@ class MakePicture(eagerx.Node):
             self.renderColor = [0, 0, 0]
         else:
             self.renderColor = [255, 0, 0]
-
 
     @eagerx.register.states()
     def reset(self):
@@ -150,7 +146,6 @@ class MakePicture(eagerx.Node):
             img = plot_x(img)
         elif self.axis_to_plot == 'y':
             img = plot_y(img)
-
 
         # saving the pictures at the sampled timestep and length
         if self.save_render_image is True:

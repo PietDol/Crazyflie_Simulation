@@ -33,12 +33,15 @@ if __name__ == "__main__":
     # Initialize empty graph
     graph = Graph.create()
 
-    engine_mode = "Pybullet" #select whether you want to use Pybullet or the Ode bridge
-    # Create crazyflie object
+    # Set URDF path
     urdf_path = os.path.dirname(Crazyflie_Simulation.__file__) + "/solid/assets/"
+
+    # - - - - - - - CHOOSE ENGINE MODE HERE - - - - - - -
+    engine_mode = "Pybullet" # choose between Pybullet and Ode (bridge select)
 
     if engine_mode == "Pybullet":
         # - - - - - - - PYBULLET START - - - - - - -
+        # Define Crazyflie Object
         crazyflie = eagerx.Object.make(
             "Crazyflie", "crazyflie", urdf=urdf_path + "cf2x.urdf", rate=rate,
             sensors=["pos", "vel", "orientation", "gyroscope", "accelerometer"],
@@ -46,56 +49,20 @@ if __name__ == "__main__":
             base_pos=[0, 0, 1], fixed_base=False,
             states=["pos", "vel", "orientation", "angular_vel"]
         )
+        # set sensor spaceconverter values
         crazyflie.sensors.pos.space_converter.low = [0, -1, 0]
         crazyflie.sensors.pos.space_converter.high = [1, 1, 0.15]
+        # set states spaceconverter values
         crazyflie.states.lateral_friction.space_converter.low = 0.4
         crazyflie.states.lateral_friction.space_converter.high = 0.1
-        graph.add(crazyflie)
 
-        # Add attitude PID node to graph
-        # attitude_pid = eagerx.Node.make(
-        #     "AttitudePID", "attitude_pid", rate=rate, n=3
-        # )
-        # graph.add(attitude_pid)
-        #
-        # # Add attitude rate PID node to graph
-        # attitude_rate_pid = eagerx.Node.make(
-        #     "AttitudeRatePID", "attitude_rate_pid", rate=rate, n=3
-        # )
-        # graph.add(attitude_rate_pid)
-        #
-        # # Add power distribution
-        # power_distribution = eagerx.Node.make(
-        #     "PowerDistribution", "power_distribution", rate=rate, n=3
-        # )
-        # graph.add(power_distribution)
-        #
-        # # Add state estimator
-        # state_estimator = eagerx.Node.make(
-        #     "StateEstimator", "state_estimator", rate=rate, n=3
-        # )
-        # graph.add(state_estimator)
-
-        # Connecting observations
-        graph.connect(source=crazyflie.sensors.orientation, observation="orientation")
-        graph.connect(source=crazyflie.sensors.pos, observation="position")
-
-        # Connecting actions
-        # graph.connect(action="external_force", target=solid.actuators.external_force)
-        graph.connect(action="desired_attitude", target=crazyflie.actuators.commanded_attitude)
-        graph.connect(action="desired_thrust", target=crazyflie.actuators.commanded_thrust)
-        # graph.connect(source=attitude_pid.outputs.new_attitude_rate, target=attitude_rate_pid.inputs.desired_rate)
-        # graph.connect(source=attitude_rate_pid.outputs.new_motor_control,
-        #               target=power_distribution.inputs.calculated_control)
-        # graph.connect(source=power_distribution.outputs.pwm_signal, target=crazyflie.actuators.pwm_input)
-        # graph.connect(source=crazyflie.sensors.gyroscope, target=state_estimator.inputs.angular_velocity)
-        # graph.connect(source=crazyflie.sensors.gyroscope, target=attitude_rate_pid.inputs.current_rate)
-        # graph.connect(source=crazyflie.sensors.accelerometer, target=state_estimator.inputs.acceleration)
-        # graph.connect(source=crazyflie.sensors.orientation, target=state_estimator.inputs.orientation)
-        # graph.connect(source=state_estimator.outputs.orientation, target=attitude_pid.inputs.current_attitude)
+        # Define engine
+        # engine = Engine.make("RealEngine", rate=rate, sync=True, process=process.NEW_PROCESS)
+        engine = eagerx.Engine.make("PybulletEngine", rate=safe_rate, gui=True, egl=True, sync=True, real_time_factor=0.0)
         # - - - - - - - PYBULLET END - - - - - - -
     elif engine_mode == "Ode":
         # - - - - - - - ODE START - - - - - - -
+        # Define Crazyflie Object
         crazyflie = eagerx.Object.make(
             "Crazyflie", "crazyflie", urdf=urdf_path + "cf2x.urdf", rate=rate,
             sensors=["pos", "orientation"],
@@ -103,15 +70,9 @@ if __name__ == "__main__":
             base_pos=[0, 0, 1], fixed_base=False,
             states=["model_state"]
         )
-        graph.add(crazyflie)
 
-        # Connecting observations
-        graph.connect(source=crazyflie.sensors.pos, observation="position")
-        graph.connect(source=crazyflie.sensors.orientation, observation="orientation")
-
-        # Connecting actions
-        graph.connect(action="desired_thrust", target=crazyflie.actuators.commanded_thrust)
-        graph.connect(action="desired_attitude", target=crazyflie.actuators.commanded_attitude)
+        # Define engine
+        engine = eagerx.Engine.make("OdeEngine", rate=safe_rate, sync=True, real_time_factor=0.0)
         # - - - - - - - ODE END - - - - - - -
     else:
         raise "Wrong engine_mode selected. Please choose between Pybullet and Ode"
@@ -120,30 +81,28 @@ if __name__ == "__main__":
     make_picture = eagerx.Node.make(
         "MakePicture", "make_picture", rate
     )
+    # Create agnostic graph
     graph.add(make_picture)
-
+    graph.add(crazyflie)
+    # Connect Crazyflie inputs
+    graph.connect(action="desired_attitude", target=crazyflie.actuators.commanded_attitude)
+    graph.connect(action="desired_thrust", target=crazyflie.actuators.commanded_thrust)
+    # Connect Crazyflie outputs
+    graph.connect(source=crazyflie.sensors.orientation, observation="orientation")
+    graph.connect(source=crazyflie.sensors.pos, observation="position")
+    # Connect picture making node
     graph.connect(source=crazyflie.sensors.orientation, target=make_picture.inputs.orientation)
     graph.connect(source=crazyflie.sensors.pos, target=make_picture.inputs.position)
-
     graph.render(source=make_picture.outputs.image, rate=rate)
+
     # Create reset node
     if real_reset:
         # Connect target state we are resetting
         graph.connect(action="pwm_input", target=crazyflie.actuators)
-        # Connect joint output to safety filter
 
     # Show in the gui
     # graph.gui()
-
-
-    # Define engines
-    # engine = Engine.make("RealEngine", rate=rate, sync=True, process=process.NEW_PROCESS)
-    if engine_mode == "Pybullet":
-        engine = eagerx.Engine.make("PybulletEngine", rate=safe_rate, gui=True, egl=True, sync=True, real_time_factor=0.0)
-    elif engine_mode == "Ode":
-        engine = eagerx.Engine.make("OdeEngine", rate=safe_rate, sync=True, real_time_factor=0.0)
-    else:
-        raise "Wrong engine_mode selected. Please choose between Pybullet and Ode"
+    # graph.is_valid(plot=True)
 
     # process=eagerx.process.ENVIRONMENT)  # delete process to run faster, this is useful for debugger
 
@@ -168,7 +127,6 @@ if __name__ == "__main__":
         done = False
         return obs, rwd, done, info
 
-
     # Define reset function
     def reset_fn(env):
         states = env.state_space.sample()
@@ -184,7 +142,6 @@ if __name__ == "__main__":
             raise "Wrong engine_mode selected. Please choose between Pybullet and Ode"
 
         return states
-
 
     # Initialize Environment
     env = EagerxEnv(name="rx", rate=rate, graph=graph, engine=engine, step_fn=step_fn, reset_fn=reset_fn, exclude=[])

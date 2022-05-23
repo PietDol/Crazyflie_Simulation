@@ -587,7 +587,7 @@ class OdeMultiInput(EngineNode):
             commanded_attitude: Optional[Float32MultiArray] = None,
     ):
         assert isinstance(self.simulator[self.obj_name], dict), (
-                'Simulator object "%s" is not compatible with this simulation node.' % self.simulator[self.obj_name]
+                'Simulator object "%s" is not compatible with this simulation node..' % self.simulator[self.obj_name]
         )
         u = [np.squeeze(commanded_thrust.msgs[-1].data), np.squeeze(commanded_attitude.msgs[-1].data[0]),
              np.squeeze(commanded_attitude.msgs[-1].data[1])]
