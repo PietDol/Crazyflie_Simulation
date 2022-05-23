@@ -7,6 +7,7 @@ import numpy as np
 from Crazyflie_Simulation.solid.pid import PID
 import pybullet
 import cv2
+from typing import Optional, List
 
 
 # todo: implement functions for the nodes
@@ -20,6 +21,10 @@ class MakePicture(eagerx.Node):
             spec,
             name: str,
             rate: float,
+            save_render_image: bool,
+            saveToPreviousRender: bool,
+            renderColor: str,
+            axisToPlot: str,
     ):
         # Performs all the steps to fill-in the params with registered info about all functions.
         spec.initialize(MakePicture)
@@ -31,6 +36,11 @@ class MakePicture(eagerx.Node):
         spec.config.inputs = ["position", "orientation"]
         spec.config.outputs = ["image"]
 
+        spec.config.save_render_image = save_render_image if save_render_image else False
+        spec.config.saveToPreviousRender = saveToPreviousRender if saveToPreviousRender else False
+        spec.config.renderColor = renderColor if renderColor else "black"
+        spec.config.axisToPlot = axisToPlot if axisToPlot else "x"
+
         # Add space converters
         spec.inputs.position.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
                                                                           [0, 0, 0],
@@ -38,13 +48,12 @@ class MakePicture(eagerx.Node):
         spec.inputs.orientation.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
                                                                              [0, 0, 0],
                                                                              [3, 3, 3], dtype="float32")
-
-    def initialize(self):
+    def initialize(self, save_render_image, saveToPreviousRender, renderColor, axisToPlot):
         #set render settings
-        self.save_render_image = False # enable or disable render from 2D plot
-        self.saveToPreviousRender = False # saves render on top of last render
-        self.renderColor = "black" # blue, red or black for now
-        self.axis_to_plot = 'x' # 'x' or 'y' right now
+        self.save_render_image = save_render_image # enable or disable render from 2D plot
+        self.saveToPreviousRender = saveToPreviousRender # saves render on top of last render
+        self.renderColor = renderColor # blue, red or black for now
+        self.axis_to_plot = axisToPlot # 'x' or 'y' right now
         self.height = 880 # set render height
         self.width = 880 # set render width
         self.offset = 40  # offset of the picture from the sides

@@ -77,9 +77,13 @@ if __name__ == "__main__":
     else:
         raise "Wrong engine_mode selected. Please choose between Pybullet and Ode"
 
-    # Add picture making node
+    # Add picture making node and EDIT CONFIGURATION
     make_picture = eagerx.Node.make(
-        "MakePicture", "make_picture", rate
+        "MakePicture", "make_picture", rate,
+        save_render_image=True,
+        saveToPreviousRender=False,
+        renderColor="black", #choose between black, red, blue
+        axisToPlot="x", #choose between x, y
     )
     # Create agnostic graph
     graph.add(make_picture)
@@ -160,7 +164,7 @@ if __name__ == "__main__":
             action = env.action_space.sample()
             action["desired_attitude"][0] = 0  # Roll
             action["desired_attitude"][1] = 0  # Pitch
-            action["desired_attitude"][2] = 45  # Yaw
+            action["desired_attitude"][2] = 0  # Yaw
             try:
                 action["desired_thrust"][0] = desired_thrust_pid.next_action(current=obs["position"][0][2],
                                                                              desired=desired_altitude)

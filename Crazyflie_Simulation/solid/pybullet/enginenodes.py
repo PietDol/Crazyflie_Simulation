@@ -243,7 +243,7 @@ class ForceController(EngineNode):
             force_target: List[float] = None,
     ):
         # Performs all the steps to fill-in the params with registered info about all functions.
-        # spec.initialize(ForceController)
+        spec.initialize(ForceController)
 
         # Modify default node params
         spec.config.name = name
@@ -387,7 +387,6 @@ class ForceController(EngineNode):
         action_to_apply = action.msgs[-1]
         # action_applied.data = np.array([40000, 40000, 40000, 40000])  # debug
         total_force = self.force_cb(action_to_apply.data)
-        print(total_force)
         self.torque_cb(total_force)
 
         return dict(action_applied=action_to_apply)
