@@ -345,13 +345,24 @@ class ForceController(EngineNode):
             def cb(action):
                 pwm = action[:4]
                 forces = np.zeros(len(pwm))
-                torques = np.zeros((len(pwm), 3))
+                torques_pitchroll = np.zeros((len(pwm), 3))
+                torques_yaw = np.zeros((len(pwm), 3))
+                torques_yaw_direction = np.array([1, -1, 1, -1])
                 total_torque = np.array([0, 0, 0])
                 for idx, pwm in enumerate(pwm):
+                    # Calculate total force
                     force = (2.130295e-11) * (pwm) ** 2 + (1.032633e-6) * pwm + 5.484560e-4
                     forces[idx] = force
-                    torques[idx] = np.cross(arms[idx], np.array([0, 0, force]))
-                    total_torque = total_torque + torques[idx]
+
+                    # Calculate torques from upward forces
+                    torques_pitchroll[idx] = np.cross(arms[idx], np.array([0, 0, force]))
+
+                    # Calculate torques from yaw
+                    torque = 0.005964552 * force + 1.563383E-5
+                    torques_yaw[idx] = np.array([0, 0, torques_yaw_direction[idx] * torque])
+
+                    # Add up all torques
+                    total_torque = total_torque + torques_pitchroll[idx] + torques_yaw[idx]
                 # print(f"Torque: {total_torque}")  # debug
                 p.applyExternalTorque(
                     objectUniqueId=objectUniqueId,
