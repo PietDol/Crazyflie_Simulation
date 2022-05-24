@@ -209,6 +209,7 @@ class PIDNode(eagerx.Node):
         self.ki = 0.0001
         self.kd = 0.4
         self.pid = PID(kp=self.kp, ki=self.ki, kd=self.kd, rate=self.rate)
+        self.gravity = 0.027 * 9.81
 
     @eagerx.register.states()
     def reset(self):
@@ -228,8 +229,7 @@ class PIDNode(eagerx.Node):
     @eagerx.register.inputs(current_height=Float32MultiArray, desired_height=Float32MultiArray)
     @eagerx.register.outputs(new_action=Float32MultiArray)
     def callback(self, t_n: float, current_height: Msg, desired_height: Msg):
-        gravity = 0.027 * 9.81
-        next_force = gravity + self.pid.next_action(current=current_height.msgs[-1].data[2],
+        next_force = self.gravity + self.pid.next_action(current=current_height.msgs[-1].data[2],
                                                     desired=desired_height.msgs[-1].data[0])
         next_pwm = np.clip(self.force_to_pwm(next_force), 10000, 60000)
         return dict(new_action=Float32MultiArray(data=np.array([next_pwm])))

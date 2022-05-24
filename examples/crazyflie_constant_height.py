@@ -88,16 +88,16 @@ if __name__ == "__main__":
     # Create agnostic graph
     graph.add(make_picture)
     graph.add(crazyflie)
-    # graph.add(pid_height)
+    graph.add(pid_height)
     # Connect Crazyflie inputs
     graph.connect(action="desired_attitude", target=crazyflie.actuators.commanded_attitude)
-    graph.connect(action="desired_thrust", target=crazyflie.actuators.commanded_thrust)
-    # graph.connect(action="desired_height", target=pid_height.inputs.desired_height)
-    # graph.connect(source=pid_height.outputs.new_action, target=crazyflie.actuators.commanded_thrust)
+    # graph.connect(action="desired_thrust", target=crazyflie.actuators.commanded_thrust)
+    graph.connect(action="desired_height", target=pid_height.inputs.desired_height)
+    graph.connect(source=pid_height.outputs.new_action, target=crazyflie.actuators.commanded_thrust)
     # Connect Crazyflie outputs
     graph.connect(source=crazyflie.sensors.orientation, observation="orientation")
     graph.connect(source=crazyflie.sensors.pos, observation="position")
-    # graph.connect(source=crazyflie.sensors.orientation, target=pid_height.inputs.current_height)
+    graph.connect(source=crazyflie.sensors.pos, target=pid_height.inputs.current_height)
     # Connect picture making node
     graph.connect(source=crazyflie.sensors.orientation, target=make_picture.inputs.orientation)
     graph.connect(source=crazyflie.sensors.pos, target=make_picture.inputs.position)
@@ -180,19 +180,6 @@ if __name__ == "__main__":
             action["desired_attitude"][0] = 0  # Roll
             action["desired_attitude"][1] = 0  # Pitch
             action["desired_attitude"][2] = 0  # Yaw
-            # action["desired_height"] = np.array([desired_altitude])
-            try:
-                action["desired_thrust"][0] = force_to_pwm(
-                    0.027 * 9.81 + desired_thrust_pid.next_action(current=obs["position"][0][2],
-                                                                  desired=desired_altitude))
-            except:
-                action["desired_thrust"][0] = force_to_pwm(0.027 * 9.81 + desired_thrust_pid.next_action(current=1,
-                                                                                                         desired=desired_altitude))
-            action["desired_thrust"][0] = np.clip(action["desired_thrust"][0], 10000, 60000)
-            # action["desired_thrust"][0] = 36100
+            action["desired_height"] = np.array([desired_altitude])
             obs, reward, done, info = env.step(action)
             rgb = env.render("rgb_array")
-            # print("Orientation:")
-            # print(obs["orientation"])
-            # print("Position:")
-            # print(obs["position"])
