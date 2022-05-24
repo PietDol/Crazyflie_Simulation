@@ -25,6 +25,7 @@ class MakePicture(eagerx.Node):
             saveToPreviousRender: bool,
             renderColor: str,
             axisToPlot: str,
+            max_steps: int,
     ):
         # Performs all the steps to fill-in the params with registered info about all functions.
         spec.initialize(MakePicture)
@@ -40,6 +41,7 @@ class MakePicture(eagerx.Node):
         spec.config.saveToPreviousRender = saveToPreviousRender if saveToPreviousRender else False
         spec.config.renderColor = renderColor if renderColor else "black"
         spec.config.axisToPlot = axisToPlot if axisToPlot else "x"
+        spec.config.max_steps = max_steps if max_steps else 500
 
         # Add space converters
         spec.inputs.position.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
@@ -48,31 +50,38 @@ class MakePicture(eagerx.Node):
         spec.inputs.orientation.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
                                                                              [0, 0, 0],
                                                                              [3, 3, 3], dtype="float32")
-    def initialize(self, save_render_image, saveToPreviousRender, renderColor, axisToPlot):
-        #set render settings
+    def initialize(self, save_render_image, saveToPreviousRender, renderColor, axisToPlot, max_steps):
+        # Change render settings here
+        self.height = 880                       # set render height [px]
+        self.width = 880                        # set render width [px]
+        self.offset = 40                        # offset of the picture from the sides [px]
+        self.timestep = 0.1                     # set timestep for render [s]
+        self.length = 10
+        self.text_height = 4
+        self.font = cv2.FONT_HERSHEY_PLAIN
+        self.xrange = [-2, 2]                   # range of x (x in 2D image = to right) [m]
+        self.yrange = [0, 4]                    # range of y (y in 2D image = up) [m]
+        self.amountOfDivisions = 9              # amount of divisions on axis, def=9
+
+        # set drone arm lengths
+        self.arm_length = 0.028 * 4
+
+        # Settings which are set when creating the MakePicture Node
         self.save_render_image = save_render_image # enable or disable render from 2D plot
         self.saveToPreviousRender = saveToPreviousRender # saves render on top of last render
         self.renderColor = renderColor # blue, red or black for now
         self.axis_to_plot = axisToPlot # 'x' or 'y' right now
-        self.height = 880 # set render height
-        self.width = 880 # set render width
-        self.offset = 40  # offset of the picture from the sides
-        self.timestep = 0.1 # set timestep for render
-        self.sample_length = 2 # set length of render
-        self.length = 10
-        self.text_height = 4
-        self.font = cv2.FONT_HERSHEY_PLAIN
+        self.sample_length = (0.95*max_steps)/(self.rate) - self.timestep #ensure it is rendered at least once, def=2
 
-        # set drone arm lengths
-        self.arm_length = 0.028 * 5
-
+        # AUTO INITIALIZATIONS
+        # init initial image
         self.modulus_prev = 1000
         if self.saveToPreviousRender == True:
             self.final_image = cv2.imread(f'../Crazyflie_Simulation/solid/Rendering/Images/final_image.png')
         else:
             self.final_image = 0
 
-        #init render color
+        # init render color
         if self.renderColor == "blue":
             self.renderColor = [255, 0, 0]
         elif self.renderColor == "red":
@@ -81,6 +90,21 @@ class MakePicture(eagerx.Node):
             self.renderColor = [0, 0, 0]
         else:
             self.renderColor = [255, 0, 0]
+
+        # init axis for render
+        self.y_axis = np.linspace(self.yrange[0], self.yrange[1], self.amountOfDivisions)
+        for idx, y in enumerate(self.y_axis):
+            self.y_axis[idx] = '%.2f'%(y)
+        self.x_axis = np.linspace(self.xrange[1], self.xrange[0], self.amountOfDivisions)
+        for idx, x in enumerate(self.x_axis):
+            self.x_axis[idx] = '%.2f'%(x)
+
+        # calculate scaling and offsets
+        self.scaling_x = (self.width-2*self.offset)/(max(self.x_axis)-min(self.x_axis)) # set scaling per division
+        self.scaling_y = (self.height-2*self.offset)/(max(self.y_axis)-min(self.y_axis))
+        self.offset_left = abs(min(self.x_axis)/(max(self.x_axis)-min(self.x_axis))*(self.width-2*self.offset)) # set offset
+        self.offset_top= abs(max(self.y_axis)/(max(self.y_axis)-min(self.y_axis))*(self.height-2*self.offset))
+
 
     @eagerx.register.states()
     def reset(self):
@@ -101,16 +125,16 @@ class MakePicture(eagerx.Node):
         img = np.zeros((self.height, self.width, 3), np.uint8)
         img[:, :] = (255, 255, 255)
 
-        for i in range(9):  # add coordinate system to the rendered picture y axis
-            y_axis = np.linspace(0, 4, 9)
+        for i in range(self.amountOfDivisions):  # add coordinate system to the rendered picture y axis
+            y_axis = self.y_axis
             x = self.offset
-            y = self.height - i * 100 - self.offset
+            y = int(self.height - i * ((self.height-2*self.offset)/(self.amountOfDivisions-1)) - self.offset)
             img = cv2.line(img, (x, y), (x - self.length, y), (0, 0, 0), 1)  # make markers on y-axis
             img = cv2.putText(img, str(y_axis[i]), (5, y + self.text_height), self.font, 1, (0, 0, 0))
 
-        for i in range(9):  # add coordinate system to the rendered picture x axis
-            x_axis = np.linspace(2, -2, 9)
-            x = self.width - i * 100 - self.offset
+        for i in range(self.amountOfDivisions):  # add coordinate system to the rendered picture x axis
+            x_axis = self.x_axis
+            x = int(self.width - i * ((self.width-2*self.offset)/(self.amountOfDivisions-1)) - self.offset)
             y = self.height - self.offset
             img = cv2.line(img, (x, self.height - self.offset), (x, self.height - self.offset + self.length), (0, 0, 0), 1)  # make markers on x-axis
             img = cv2.putText(img, str(x_axis[i]), (x - self.text_height * 4, y + 25), self.font, 1, (0, 0, 0))
@@ -127,29 +151,38 @@ class MakePicture(eagerx.Node):
             z_correction = self.arm_length * np.sin(-pitch)
             x_correction = self.arm_length * np.cos(-pitch)
             # print(f'pitch is: {-pitch*180/np.pi} degrees')
-            img = cv2.circle(img, (int((pos_x + x_correction) * 200) // 1 + self.width // 2,
-                                   self.height - int((pos_z + z_correction) * 200 // 1) - self.offset), 5, self.renderColor, -1)
-            img = cv2.circle(img, (int((pos_x - x_correction) * 200) // 1 + self.width // 2,
-                                   self.height - int((pos_z - z_correction) * 200 // 1) - self.offset), 5, self.renderColor, -1)
-            img = cv2.line(img, (int((pos_x + x_correction) * 200) // 1 + self.width // 2,
-                                 self.height - int((pos_z + z_correction) * 200 // 1) - self.offset),
-                           (int((pos_x - x_correction) * 200) // 1 + self.width // 2,
-                            self.height - int((pos_z - z_correction) * 200 // 1) - self.offset), self.renderColor, 2)
+            x1 = self.scaling_x*(pos_x+x_correction)+self.offset_left+self.offset # for left dot
+            x2 = self.scaling_x*(pos_x-x_correction)+self.offset_left+self.offset # for right dot
+            y1 = self.offset_top-self.scaling_y*(pos_z+z_correction)+self.offset
+            y2 = self.offset_top-self.scaling_y*(pos_z-z_correction)+self.offset
+            img = cv2.circle(img, (int(x1),
+                             int(y1)), 5, self.renderColor, -1)
+            img = cv2.circle(img, (int(x2),
+                                   int(y2)), 5, self.renderColor, -1)
+            img = cv2.line(img, (int(x1),
+                                 int(y1)),
+                           (int(x2),
+                            int(y2)), self.renderColor, 2)
             return img
 
         def plot_y(img):
             """"Changes the plot so that you can see from the y axis side"""
             z_correction = self.arm_length * np.sin(roll)
             y_correction = self.arm_length * np.cos(roll)
-            img = cv2.circle(img, (int((pos_y + y_correction) * 200) // 1 + self.width // 2,
-                                   self.height - int((pos_z + z_correction) * 200 // 1) - self.offset), 5, (255, 0, 0), -1)
-            img = cv2.circle(img, (int((pos_y - y_correction) * 200) // 1 + self.width // 2,
-                                   self.height - int((pos_z - z_correction) * 200 // 1) - self.offset), 5, (255, 0, 0), -1)
-            img = cv2.line(img, (int((pos_y + y_correction) * 200) // 1 + self.width // 2,
-                                 self.height - int((pos_z + z_correction) * 200 // 1) - self.offset),
-                           (int((pos_y - y_correction) * 200) // 1 + self.width // 2,
-                            self.height - int((pos_z - z_correction) * 200 // 1) - self.offset), (255, 0, 0), 2)
+            x1 = self.scaling_x*(pos_y+y_correction)+self.offset_left+self.offset # for left dot
+            x2 = self.scaling_x*(pos_y-y_correction)+self.offset_left+self.offset # for right dot
+            y1 = self.offset_top-self.scaling_y*(pos_z+z_correction)+self.offset
+            y2 = self.offset_top-self.scaling_y*(pos_z-z_correction)+self.offset
+            img = cv2.circle(img, (int(x1),
+                                   int(y1)), 5, self.renderColor, -1)
+            img = cv2.circle(img, (int(x2),
+                                   int(y2)), 5, self.renderColor, -1)
+            img = cv2.line(img, (int(x1),
+                                 int(y1)),
+                           (int(x2),
+                           int(y2)), self.renderColor, 2)
             return img
+
         #checks which axis is selected to plot
         if self.axis_to_plot == 'x':
             img = plot_x(img)
@@ -171,7 +204,6 @@ class MakePicture(eagerx.Node):
 
         data = img.tobytes("C")
         msg = Image(data=data, height=self.height, width=self.width, encoding="bgr8", step=3 * self.width)
-        # print(type(msg))
         return dict(image=msg)
 
 # class AttitudePID(eagerx.Node):

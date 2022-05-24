@@ -30,7 +30,7 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
         real_reset = False
         rate = 220  # 220?
         safe_rate = 220
-        max_steps = 500
+        max_steps = 1000
 
         # Initialize empty graph
         graph = Graph.create()
@@ -83,7 +83,8 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
         # Add picture making node
         make_picture = eagerx.Node.make(
             "MakePicture", "make_picture", rate, save_render_image=save_render_image,
-            saveToPreviousRender=saveToPreviousRender, renderColor=renderColor, axisToPlot=axisToPlot
+            saveToPreviousRender=saveToPreviousRender, renderColor=renderColor, axisToPlot=axisToPlot,
+            max_steps=max_steps,
         )
 
         # Create agnostic graph
@@ -181,14 +182,14 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
 #           saveToPreviousRender (True, False),
 #           render color (black, red, blue)
 #           axisToPlot (x, y)
-axisToPlot = "x"
-runEagerX("Pybullet",   # first run
+axisToPlot = "y"
+runEagerX("Pybullet",  # first run
           save_render_image=True,
           saveToPreviousRender=False,
           renderColor="black",
           axisToPlot=axisToPlot)
-# second run
-runEagerX("Ode",    # second run
+
+runEagerX("Ode",  # second run
           save_render_image=True,
           saveToPreviousRender=True,
           renderColor="red",
