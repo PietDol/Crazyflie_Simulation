@@ -478,7 +478,7 @@ class StateEstimator(eagerx.EngineNode):
         spec.config.rate = rate
         spec.config.process = eagerx.process.ENVIRONMENT
         spec.config.inputs = ["angular_velocity", "acceleration", "orientation"]
-        spec.config.outputs = ["orientation"]
+        spec.config.outputs = ["orientation_state_estimator", "orientation_pybullet"]
 
         # Add space converters
         spec.inputs.angular_velocity.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
@@ -490,9 +490,13 @@ class StateEstimator(eagerx.EngineNode):
         spec.inputs.orientation.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
                                                                              [-1, -1, -1, -1],
                                                                              [1, 1, 1, 1], dtype="float32")
-        spec.outputs.orientation.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
-                                                                              [-30, -30, -30],
-                                                                              [30, 30, 30], dtype="float32")
+        spec.outputs.orientation_pybullet.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
+                                                                                       [-30, -30, -30],
+                                                                                       [30, 30, 30], dtype="float32")
+        spec.outputs.orientation_state_estimator.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
+                                                                                              [-30, -30, -30],
+                                                                                              [30, 30, 30],
+                                                                                              dtype="float32")
 
     def initialize(self):
         self.qw = 1.0
@@ -526,7 +530,7 @@ class StateEstimator(eagerx.EngineNode):
 
     @eagerx.register.inputs(angular_velocity=Float32MultiArray, acceleration=Float32MultiArray,
                             orientation=Float32MultiArray)
-    @eagerx.register.outputs(orientation=Float32MultiArray)
+    @eagerx.register.outputs(orientation_state_estimator=Float32MultiArray, orientation_pybullet=Float32MultiArray)
     def callback(self, t_n: float, angular_velocity: Msg, acceleration: Msg, orientation: Msg):
         angular_velocity = angular_velocity.msgs[-1].data
         acceleration = np.array(acceleration.msgs[-1].data)
@@ -545,8 +549,8 @@ class StateEstimator(eagerx.EngineNode):
         print("attitude from state estimator default      = ", np.round(attitude_calculated, 3))
         # print("attitude from state estimator madgwick     = ", np.round(attitude_calculated_madgwick, 3))
         print("=" * 80)
-        return dict(
-            orientation=Float32MultiArray(data=attitude_calculated))
+        return dict(orientation_state_estimator=Float32MultiArray(data=attitude_calculated),
+                    orientation_pybullet=Float32MultiArray(data=attitude_pitch_inverted))
 
     @staticmethod
     def invert_pitch(attitude):

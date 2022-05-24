@@ -265,11 +265,11 @@ class Crazyflie(Object):
         graph.connect(source=orientation.outputs.obs, target=state_estimator.inputs.orientation)
 
         # todo: connect output state_estimator to attitude_pid.inputs.current_attitude
-        graph.connect(source=state_estimator.outputs.orientation, target=attitude_pid.inputs.current_attitude)
-        graph.connect(source=state_estimator.outputs.orientation, sensor="orientation")
+        graph.connect(source=state_estimator.outputs.orientation_state_estimator, target=attitude_pid.inputs.current_attitude)
+        graph.connect(source=state_estimator.outputs.orientation_pybullet, sensor="orientation")
         # graph.connect(source=orientation.outputs.obs, target=attitude_pid.inputs.current_attitude)
 
-        # graph.gui()
+        graph.gui()
         # Check graph validity (commented out)
         # graph.is_valid(plot=True)
 
