@@ -36,8 +36,8 @@ class MakePicture(eagerx.Node):
                                                                           [0, 0, 0],
                                                                           [3, 3, 3], dtype="float32")
         spec.inputs.orientation.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
-                                                                             [0, 0, 0],
-                                                                             [3, 3, 3], dtype="float32")
+                                                                             [-30, -30, -30],
+                                                                             [30, 30, 30], dtype="float32")
         # spec.outputs.image.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
         #                                                                       [0, 0, 0],
         #                                                                       [3, 3, 3], dtype="float32")
@@ -46,7 +46,7 @@ class MakePicture(eagerx.Node):
         self.modulus_prev = 1000
         self.final_image = 0
         self.save_render_image = True
-        self.axis_to_plot = 'x' # 'x' or 'y' right now
+        self.axis_to_plot = 'x'  # 'x' or 'y' right now
         self.height = 880
         self.width = 880
         self.offset = 40  # offset of the picture from the sides
@@ -63,15 +63,14 @@ class MakePicture(eagerx.Node):
 
     @eagerx.register.inputs(position=Float32MultiArray, orientation=Float32MultiArray)
     @eagerx.register.outputs(image=Image)
-
     def callback(self, t_n: float, position: Msg, orientation: Msg):
         pos_x, pos_y, pos_z = position.msgs[-1].data[0], position.msgs[-1].data[1], position.msgs[-1].data[2]
 
         if len(orientation.msgs[-1].data) == 4:
             euler_orientation = pybullet.getEulerFromQuaternion(orientation.msgs[-1].data)
         else:
-            euler_orientation = orientation.msgs[-1].data
-        roll, pitch, yaw = euler_orientation[0], euler_orientation[1], euler_orientation[2]
+            euler_orientation = np.array(orientation.msgs[-1].data) * np.pi / 180
+        roll, pitch, yaw = euler_orientation[0], -euler_orientation[1], euler_orientation[2]
 
         img = np.zeros((self.height, self.width, 3), np.uint8)
         img[:, :] = (255, 255, 255)
@@ -87,11 +86,13 @@ class MakePicture(eagerx.Node):
             x_axis = np.linspace(2, -2, 9)
             x = self.width - i * 100 - self.offset
             y = self.height - self.offset
-            img = cv2.line(img, (x, self.height - self.offset), (x, self.height - self.offset + self.length), (0, 0, 0), 1)  # make markers on x-axis
+            img = cv2.line(img, (x, self.height - self.offset), (x, self.height - self.offset + self.length), (0, 0, 0),
+                           1)  # make markers on x-axis
             img = cv2.putText(img, str(x_axis[i]), (x - self.text_height * 4, y + 25), self.font, 1, (0, 0, 0))
 
         #  create border
-        img = cv2.rectangle(img, (self.offset, self.offset), (self.height - self.offset, self.width - self.offset), (0, 0, 0), 1)
+        img = cv2.rectangle(img, (self.offset, self.offset), (self.height - self.offset, self.width - self.offset),
+                            (0, 0, 0), 1)
 
         # give the sampled image an axis like for the render image
         if type(self.final_image) is int:
@@ -103,9 +104,11 @@ class MakePicture(eagerx.Node):
             x_correction = self.arm_length * np.cos(-pitch)
             # print(f'pitch is: {-pitch*180/np.pi} degrees')
             img = cv2.circle(img, (int((pos_x + x_correction) * 200) // 1 + self.width // 2,
-                                   self.height - int((pos_z + z_correction) * 200 // 1) - self.offset), 5, (255, 0, 0), -1)
+                                   self.height - int((pos_z + z_correction) * 200 // 1) - self.offset), 5, (255, 0, 0),
+                             -1)
             img = cv2.circle(img, (int((pos_x - x_correction) * 200) // 1 + self.width // 2,
-                                   self.height - int((pos_z - z_correction) * 200 // 1) - self.offset), 5, (255, 0, 0), -1)
+                                   self.height - int((pos_z - z_correction) * 200 // 1) - self.offset), 5, (255, 0, 0),
+                             -1)
             img = cv2.line(img, (int((pos_x + x_correction) * 200) // 1 + self.width // 2,
                                  self.height - int((pos_z + z_correction) * 200 // 1) - self.offset),
                            (int((pos_x - x_correction) * 200) // 1 + self.width // 2,
@@ -117,20 +120,22 @@ class MakePicture(eagerx.Node):
             z_correction = self.arm_length * np.sin(roll)
             y_correction = self.arm_length * np.cos(roll)
             img = cv2.circle(img, (int((pos_y + y_correction) * 200) // 1 + self.width // 2,
-                                   self.height - int((pos_z + z_correction) * 200 // 1) - self.offset), 5, (255, 0, 0), -1)
+                                   self.height - int((pos_z + z_correction) * 200 // 1) - self.offset), 5, (255, 0, 0),
+                             -1)
             img = cv2.circle(img, (int((pos_y - y_correction) * 200) // 1 + self.width // 2,
-                                   self.height - int((pos_z - z_correction) * 200 // 1) - self.offset), 5, (255, 0, 0), -1)
+                                   self.height - int((pos_z - z_correction) * 200 // 1) - self.offset), 5, (255, 0, 0),
+                             -1)
             img = cv2.line(img, (int((pos_y + y_correction) * 200) // 1 + self.width // 2,
                                  self.height - int((pos_z + z_correction) * 200 // 1) - self.offset),
                            (int((pos_y - y_correction) * 200) // 1 + self.width // 2,
                             self.height - int((pos_z - z_correction) * 200 // 1) - self.offset), (255, 0, 0), 2)
             return img
-        #checks which axis is selected to plot
+
+        # checks which axis is selected to plot
         if self.axis_to_plot == 'x':
             img = plot_x(img)
         elif self.axis_to_plot == 'y':
             img = plot_y(img)
-
 
         # saving the pictures at the sampled timestep and length
         if self.save_render_image is True:
@@ -410,4 +415,3 @@ class MakePicture(eagerx.Node):
 #     def callback(self, t_n: float, angular_velocity: Msg, acceleration: Msg, orientation: Msg):
 #         attitude = orientation.msgs[-1].data
 #         return dict(orientation=Float32MultiArray(data=attitude))
-
