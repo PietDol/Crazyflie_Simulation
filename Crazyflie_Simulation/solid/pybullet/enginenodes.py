@@ -16,6 +16,7 @@ from eagerx.core.entities import EngineNode, SpaceConverter
 import eagerx.core.register as register
 import numpy as np
 
+
 class AttitudePID(EngineNode):
     @staticmethod
     @eagerx.register.spec("AttitudePID", EngineNode)
@@ -40,8 +41,8 @@ class AttitudePID(EngineNode):
                                                                                   [-30, -30, -30],
                                                                                   [30, 30, 30], dtype="float32")
         spec.inputs.current_attitude.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
-                                                                                  [-1, -1, -1, -1],
-                                                                                  [1, 1, 1, 1], dtype="float32")
+                                                                                  [-30, -30, -30],
+                                                                                  [30, 30, 30], dtype="float32")
         spec.outputs.new_attitude_rate.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
                                                                                     [-90, -90, -90],
                                                                                     [90, 90, 90], dtype="float32")
@@ -65,18 +66,19 @@ class AttitudePID(EngineNode):
         # Desired attitude is in degrees
         desired_attitude = desired_attitude.msgs[-1].data
         # Current attitude from quaternion to euler angles (RPY)
-        current_attitude_euler = pybullet.getEulerFromQuaternion(current_attitude)
+        # current_attitude_euler = pybullet.getEulerFromQuaternion(current_attitude)
+        current_attitude_euler = current_attitude
         # Current attitude from radians to degrees
-        current_attitude_deg = np.zeros(3)
-        for idx, ang in enumerate(current_attitude_euler):
-            current_attitude_deg[idx] = ang * 180 / np.pi
+        current_attitude_deg = current_attitude_euler
+        # current_attitude_deg = np.zeros(3)
+        # for idx, ang in enumerate(current_attitude_euler):
+        #     current_attitude_deg[idx] = ang * 180 / np.pi
 
         # print(f"Desired attitude: {desired_attitude[1]}")
         # print(f"Current attitude: {current_attitude_deg[1]}")
 
         next_roll = self.attitude_pid_roll.next_action(current=current_attitude_deg[0], desired=desired_attitude[0])
-        # todo: (-) minus sign (necessary to make it work)
-        next_pitch = self.attitude_pid_pitch.next_action(current=-current_attitude_deg[1], desired=desired_attitude[1])
+        next_pitch = self.attitude_pid_pitch.next_action(current=current_attitude_deg[1], desired=desired_attitude[1])
         next_yaw = self.attitude_pid_yaw.next_action(current=current_attitude_deg[2], desired=desired_attitude[2])
         next_action = np.array([next_roll, next_pitch, next_yaw])
         return dict(new_attitude_rate=Float32MultiArray(data=next_action))
@@ -142,6 +144,7 @@ class AttitudeRatePID(EngineNode):
         next_action = np.array([next_roll_rate, next_pitch_rate, next_yaw_rate])
         # print(next_action)
         return dict(new_motor_control=Float32MultiArray(data=next_action))
+
 
 class PowerDistribution(EngineNode):
     @staticmethod
@@ -228,6 +231,7 @@ class PowerDistribution(EngineNode):
             [motorPower_m1, motorPower_m2, motorPower_m3, motorPower_m4])  # enginenode verwacht force
         # new_pwm_signal = np.array([3,3,0])
         return dict(pwm_signal=Float32MultiArray(data=new_pwm_signal))
+
 
 class ForceController(EngineNode):
     @staticmethod
@@ -392,6 +396,7 @@ class ForceController(EngineNode):
 
         return dict(action_applied=action_to_apply)
 
+
 class AccelerometerSensor(EngineNode):
     @staticmethod
     @register.spec("AccelerometerSensor", EngineNode)
@@ -455,6 +460,7 @@ class AccelerometerSensor(EngineNode):
         # print("=" * 50)                   # debug
         return dict(obs=Float32MultiArray(data=diff))
 
+
 class StateEstimator(eagerx.EngineNode):
     @staticmethod
     @eagerx.register.spec("StateEstimator", EngineNode)
@@ -482,14 +488,37 @@ class StateEstimator(eagerx.EngineNode):
                                                                               [0, 0, 0],
                                                                               [3, 3, 3], dtype="float32")
         spec.inputs.orientation.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
-                                                                             [0, 0, 0],
-                                                                             [3, 3, 3], dtype="float32")
+                                                                             [-1, -1, -1, -1],
+                                                                             [1, 1, 1, 1], dtype="float32")
         spec.outputs.orientation.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
-                                                                              [0, 0, 0],
-                                                                              [3, 3, 3], dtype="float32")
+                                                                              [-30, -30, -30],
+                                                                              [30, 30, 30], dtype="float32")
 
     def initialize(self):
-        pass
+        self.qw = 1.0
+        self.qx = 0.0
+        self.qy = 0.0
+        self.qz = 0.0
+
+        # For overall rate = 240 Hz
+        self.twoKp = 2 * 0.0008  # 2 * 0.4
+        self.twoKi = 2 * 0.0001  # 2 * 0.001
+        # self.twoKp = 2 * 0.1  # 2 * 0.4
+        # self.twoKi = 2 * 0.004  # 2 * 0.001
+
+        self.i = 0
+
+        self.integralFBx = 0.0
+        self.integralFBy = 0.0
+        self.integralFBz = 0.0
+
+        # initialize for Madgwick quaternion calculations
+        self.qw2 = 1.0
+        self.qx2 = 0.0
+        self.qy2 = 0.0
+        self.qz2 = 0.0
+
+        self.beta = 0.001  # [2 * proportional gain (Kp)] = 0.01
 
     @eagerx.register.states()
     def reset(self):
@@ -499,9 +528,212 @@ class StateEstimator(eagerx.EngineNode):
                             orientation=Float32MultiArray)
     @eagerx.register.outputs(orientation=Float32MultiArray)
     def callback(self, t_n: float, angular_velocity: Msg, acceleration: Msg, orientation: Msg):
-        # attitude = orientation.msgs[-1].data
-        attitude = [0,0,0,1]
-        return dict(orientation=Float32MultiArray(data=attitude))
+        angular_velocity = angular_velocity.msgs[-1].data
+        acceleration = np.array(acceleration.msgs[-1].data)
+
+        # Crazyflie default state estimator
+        attitude_calculated = np.array(self.calculate_attitude(acceleration, angular_velocity))
+        # Crazyflie Madgwick state estimator
+        attitude_calculated_madgwick = np.array(self.calculate_attitude_madgwick(acceleration, angular_velocity))
+
+        # The pybullet output
+        attitude = np.array(pybullet.getEulerFromQuaternion(orientation.msgs[-1].data)) * 180 / np.pi
+        attitude_pitch_inverted = self.invert_pitch(attitude)
+
+        # print(f"Pybullet  [qx, qy, qz, qw] = {orientation.msgs[-1].data}")
+        print("attitude from pybullet with inverted pitch = ", np.round(attitude_pitch_inverted, 3))
+        print("attitude from state estimator default      = ", np.round(attitude_calculated, 3))
+        # print("attitude from state estimator madgwick     = ", np.round(attitude_calculated_madgwick, 3))
+        print("=" * 80)
+        return dict(
+            orientation=Float32MultiArray(data=attitude_calculated))
+
+    @staticmethod
+    def invert_pitch(attitude):
+        return np.array([attitude[0], -attitude[1], attitude[2]])
+
+    def calculate_attitude(self, acceleration, angular_velocity):
+        # source: https://github.com/bitcraze/crazyflie-firmware/blob/2a282b575c2541d3f3b4552296952a6cc40bf5b5/src/modules/src/sensfusion6.c#L99-L253
+        dt = (1 / self.rate)
+        # Quaternion of sensor frame relative to auxiliary frame
+
+        ax = acceleration[0]
+        ay = acceleration[1]
+        az = acceleration[2]
+        gx = angular_velocity[0] * np.pi / 180  # convert angular velocities to rad
+        gy = angular_velocity[1] * np.pi / 180
+        gz = angular_velocity[2] * np.pi / 180
+
+        # own reset function (not necessary)
+        # if self.i % 500 == 0:
+        #     # self.qw, self.qx, self.qy, self.qz  = 1.0, 0, 0, 0
+        #     self.integralFBx = 0.0  # prevent integral windup
+        #     self.integralFBy = 0.0
+        #     self.integralFBz = 0.0
+        # self.i += 1
+
+        if not ((ax == 0.0) and (ay == 0.0) and (az == 0.0)):
+            recipNorm = 1 / np.sqrt(np.sum(acceleration ** 2))  # normalize acceleration
+            ax *= recipNorm
+            ay *= recipNorm
+            az *= recipNorm
+
+            # Estimated direction of gravity and vector perpendicular to magnetic flux
+            halfvx = self.qx * self.qz - self.qw * self.qy
+            halfvy = self.qw * self.qx + self.qy * self.qz
+            halfvz = self.qw * self.qw - 0.5 + self.qz * self.qz
+
+            # Error is sum of cross product between estimated and measured direction of gravity
+            halfex = (ay * halfvz - az * halfvy)
+            halfey = (az * halfvx - ax * halfvz)
+            halfez = (ax * halfvy - ay * halfvx)
+
+            if self.twoKi > 0.0:
+                self.integralFBx += self.twoKi * halfex * dt  # integral error scaled by Ki
+                self.integralFBy += self.twoKi * halfey * dt
+                self.integralFBz += self.twoKi * halfez * dt
+                gx += self.integralFBx  # apply integral feedback
+                gy += self.integralFBy
+                gz += self.integralFBz
+            else:
+                self.integralFBx = 0.0  # prevent integral windup
+                self.integralFBy = 0.0
+                self.integralFBz = 0.0
+
+            # Apply proportional feedback
+            gx += self.twoKp * halfex
+            gy += self.twoKp * halfey
+            gz += self.twoKp * halfez
+
+        # Integrate rate of change of quaternion
+        gx *= (0.5 * dt)  # pre-multiply common factors
+        gy *= (0.5 * dt)
+        gz *= (0.5 * dt)
+        qa = self.qw
+        qb = self.qx
+        qc = self.qy
+        self.qw += (-qb * gx - qc * gy - self.qz * gz)
+        self.qx += (qa * gx + qc * gz - self.qz * gy)
+        self.qy += (qa * gy - qb * gz + self.qz * gx)
+        self.qz += (qa * gz + qb * gy - qc * gx)
+
+        # Normalise quaternion
+        recipNorm = 1 / np.sqrt(self.qw ** 2 + self.qx ** 2 + self.qy ** 2 + self.qz ** 2)
+        self.qw *= recipNorm
+        self.qx *= recipNorm
+        self.qy *= recipNorm
+        self.qz *= recipNorm
+
+        # estimated gravity direction
+        # https://github.com/bitcraze/crazyflie-firmware/blob/2a282b575c2541d3f3b4552296952a6cc40bf5b5/src/modules/src/sensfusion6.c#L305-L307
+        gravX = 2 * (self.qx * self.qz - self.qw * self.qy)
+        gravY = 2 * (self.qw * self.qx + self.qy * self.qz)
+        gravZ = self.qw ** 2 - self.qx ** 2 - self.qy ** 2 + self.qz ** 2
+        if gravX > 1:
+            gravX = 1
+        elif gravX < -1:
+            gravX = -1
+
+        # quaternion to euler for the crazyflie -> seems to be working; gives the same results as pybullet.getEulerfromQuaternion
+        # https://github.com/bitcraze/crazyflie-firmware/blob/2a282b575c2541d3f3b4552296952a6cc40bf5b5/src/modules/src/sensfusion6.c#L272-L274
+        yaw = np.arctan((2 * (self.qw * self.qz + self.qx * self.qy)) / (
+                self.qw ** 2 + self.qx ** 2 - self.qy ** 2 - self.qz ** 2)) * 180 / np.pi
+        pitch = np.arcsin(gravX) * 180 / np.pi  # here is the pitch inverted
+        roll = np.arctan(gravY / gravZ) * 180 / np.pi
+
+        # print(f"estimated direction of gravity = {[gravX, gravY, gravZ]}")
+        # print(f"Crazyflie default [qx, qy, qz, qw]        = {[self.qx, self.qy, self.qz, self.qw]}")
+        # roll, pitch, yaw = pybullet.getEulerFromQuaternion(np.array([self.qx, self.qy, self.qz, self.qw]))
+        # print("attitude from pybullet quaternion to euler = ", self.invert_pitch(np.round(np.array([roll, pitch, yaw]) * 180 / np.pi, 3)))
+
+        return np.array([roll, pitch, yaw]) * 180 / np.pi
+
+    def calculate_attitude_madgwick(self, acceleration, angular_velocity):
+        ax = acceleration[0]
+        ay = acceleration[1]
+        az = acceleration[2]
+        gx = angular_velocity[0] * np.pi / 180  # convert angular velocities to rad
+        gy = angular_velocity[1] * np.pi / 180
+        gz = angular_velocity[2] * np.pi / 180
+        dt = (1 / self.rate)
+
+        qDot1 = 0.5 * (-self.qx2 * gx - self.qy2 * gy - self.qz2 * gz)
+        qDot2 = 0.5 * (self.qw2 * gx + self.qy2 * gz - self.qz2 * gy)
+        qDot3 = 0.5 * (self.qw2 * gy - self.qx2 * gz + self.qz2 * gx)
+        qDot4 = 0.5 * (self.qw2 * gz + self.qx2 * gy - self.qy2 * gx)
+
+        if not (ax == 0.0 and ay == 0.0 and az == 0):
+            recipNorm = 1 / np.sqrt(ax ** 2 + ay ** 2 + az ** 2)
+            ax *= recipNorm
+            ay *= recipNorm
+            az *= recipNorm
+
+            _2qw = 2.0 * self.qw2
+            _2qx = 2.0 * self.qx2
+            _2qy = 2.0 * self.qy2
+            _2qz = 2.0 * self.qz2
+            _4qw = 4.0 * self.qw2
+            _4qx = 4.0 * self.qx2
+            _4qy = 4.0 * self.qy2
+            _8qx = 8.0 * self.qx2
+            _8qy = 8.0 * self.qy2
+            qwqw = self.qw2 ** 2
+            qxqx = self.qx2 ** 2
+            qyqy = self.qy2 ** 2
+            qzqz = self.qz2 ** 2
+
+            # Gradient decent algorithm corrective step
+            s0 = _4qw * qyqy + _2qy * ax + _4qw * qxqx - _2qx * ay
+            s1 = _4qx * qzqz - _2qz * ax + 4.0 * qwqw * self.qx2 - _2qw * ay - _4qx + _8qx * qxqx + _8qx * qyqy + _4qx * az
+            s2 = 4.0 * qwqw * self.qy2 + _2qw * ax + _4qy * qzqz - _2qz * ay - _4qy + _8qy * qxqx + _8qy * qyqy + _4qy * az
+            s3 = 4.0 * qxqx * self.qz2 - _2qx * ax + 4.0 * qyqy * self.qz2 - _2qy * ay
+            if not (s0 == 0.0 and s1 == 0 and s2 == 0 and s3 == 0):
+                recipNorm = 1 / np.sqrt(s0 ** 2 + s1 ** 2 + s2 ** 2 + s3 ** 2)
+                s0 *= recipNorm
+                s1 *= recipNorm
+                s2 *= recipNorm
+                s3 *= recipNorm
+
+            # Apply feedback step
+            qDot1 -= self.beta * s0
+            qDot2 -= self.beta * s1
+            qDot3 -= self.beta * s2
+            qDot4 -= self.beta * s3
+
+        self.qw2 += qDot1 * dt
+        self.qx2 += qDot2 * dt
+        self.qy2 += qDot3 * dt
+        self.qz2 += qDot4 * dt
+
+        recipNorm = 1 / np.sqrt(self.qw2 ** 2 + self.qx2 ** 2 + self.qy2 ** 2 + self.qz2 ** 2)
+        self.qw2 *= recipNorm
+        self.qx2 *= recipNorm
+        self.qy2 *= recipNorm
+        self.qz2 *= recipNorm
+
+        # estimated gravity direction
+        # https://github.com/bitcraze/crazyflie-firmware/blob/2a282b575c2541d3f3b4552296952a6cc40bf5b5/src/modules/src/sensfusion6.c#L305-L307
+        gravX = 2 * (self.qx2 * self.qz2 - self.qw2 * self.qy2)
+        gravY = 2 * (self.qw2 * self.qx2 + self.qy2 * self.qz2)
+        gravZ = self.qw2 ** 2 - self.qx2 ** 2 - self.qy2 ** 2 + self.qz2 ** 2
+        if gravX > 1:
+            gravX = 1
+        elif gravX < -1:
+            gravX = -1
+
+        # quaternion to euler for the crazyflie -> seems to be working; gives the same results as pybullet.getEulerfromQuaternion
+        # https://github.com/bitcraze/crazyflie-firmware/blob/2a282b575c2541d3f3b4552296952a6cc40bf5b5/src/modules/src/sensfusion6.c#L272-L274
+        yaw = np.arctan((2 * (self.qw2 * self.qz2 + self.qx2 * self.qy2)) / (
+                self.qw2 ** 2 + self.qx2 ** 2 - self.qy2 ** 2 - self.qz2 ** 2)) * 180 / np.pi
+        pitch = np.arcsin(gravX) * 180 / np.pi  # here is the pitch inverted
+        roll = np.arctan(gravY / gravZ) * 180 / np.pi
+
+        # print(f"Crazyflie Madgwick [qx, qy, qz, qw]       = {[self.qx2, self.qy2, self.qz2, self.qw2]}")
+        # roll, pitch, yaw = pybullet.getEulerFromQuaternion(np.array([self.qx2, self.qy2, self.qz2, self.qw2]))
+        # print("attitude from pybullet quaternion to euler = ", self.invert_pitch(np.round(np.array([roll, pitch, yaw]) * 180 / np.pi, 3)))
+
+        return np.array([roll, pitch, yaw]) * 180 / np.pi
+
 
 class FloatMultiArrayOutput(EngineNode):
     @staticmethod

@@ -85,8 +85,8 @@ class MakePicture(eagerx.Node):
         if len(orientation.msgs[-1].data) == 4:
             euler_orientation = pybullet.getEulerFromQuaternion(orientation.msgs[-1].data)
         else:
-            euler_orientation = orientation.msgs[-1].data
-        roll, pitch, yaw = euler_orientation[0], euler_orientation[1], euler_orientation[2]
+            euler_orientation = np.array(orientation.msgs[-1].data) * np.pi / 180
+        roll, pitch, yaw = euler_orientation[0], -euler_orientation[1], euler_orientation[2]
 
         img = np.zeros((self.height, self.width, 3), np.uint8)
         img[:, :] = (255, 255, 255)
