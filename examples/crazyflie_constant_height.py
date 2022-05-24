@@ -8,6 +8,7 @@ import Crazyflie_Simulation  # Registers objects # noqa # pylint: disable=unused
 import eagerx_reality  # Registers Engine # noqa # pylint: disable=unused-import
 import Crazyflie_Simulation.solid.nodes
 from Crazyflie_Simulation.solid.pid import PID
+from Crazyflie_Simulation.solid.log import Log
 
 # Other
 import numpy as np
@@ -37,7 +38,7 @@ if __name__ == "__main__":
     urdf_path = os.path.dirname(Crazyflie_Simulation.__file__) + "/solid/assets/"
 
     # - - - - - - - CHOOSE ENGINE MODE HERE - - - - - - -
-    engine_mode = "Pybullet" # choose between Pybullet and Ode (bridge select)
+    engine_mode = "Pybullet"  # choose between Pybullet and Ode (bridge select)
 
     if engine_mode == "Pybullet":
         # - - - - - - - PYBULLET START - - - - - - -
@@ -58,7 +59,8 @@ if __name__ == "__main__":
 
         # Define engine
         # engine = Engine.make("RealEngine", rate=rate, sync=True, process=process.NEW_PROCESS)
-        engine = eagerx.Engine.make("PybulletEngine", rate=safe_rate, gui=True, egl=True, sync=True, real_time_factor=0.0)
+        engine = eagerx.Engine.make("PybulletEngine", rate=safe_rate, gui=True, egl=True, sync=True,
+                                    real_time_factor=0.0)
         # - - - - - - - PYBULLET END - - - - - - -
     elif engine_mode == "Ode":
         # - - - - - - - ODE START - - - - - - -
@@ -82,8 +84,8 @@ if __name__ == "__main__":
         "MakePicture", "make_picture", rate,
         save_render_image=True,
         saveToPreviousRender=False,
-        renderColor="black", #choose between black, red, blue
-        axisToPlot="x", #choose between x, y
+        renderColor="black",  # choose between black, red, blue
+        axisToPlot="x",  # choose between x, y
     )
     # Create agnostic graph
     graph.add(make_picture)
@@ -103,6 +105,7 @@ if __name__ == "__main__":
     if real_reset:
         # Connect target state we are resetting
         graph.connect(action="pwm_input", target=crazyflie.actuators)
+
 
     # Show in the gui
     # graph.gui()
@@ -131,6 +134,7 @@ if __name__ == "__main__":
         done = False
         return obs, rwd, done, info
 
+
     # Define reset function
     def reset_fn(env):
         states = env.state_space.sample()
@@ -147,18 +151,22 @@ if __name__ == "__main__":
 
         return states
 
+
     # Initialize Environment
     env = EagerxEnv(name="rx", rate=rate, graph=graph, engine=engine, step_fn=step_fn, reset_fn=reset_fn, exclude=[])
 
     # First train in simulation
     # env.render("human")
 
+    # Create log object
+    log_data = Log(unique_file=False, rate=rate)
     # Evaluate
-    for eps in range(5000):
-        print(f"Episode {eps}")
+    for run in [2, 1, 3]:
+        print(f"Episode {run}")
+        i = 0
         _, done = env.reset(), False
         desired_altitude = 1
-        while not done:
+        while i < 100*run:
             desired_thrust_pid = PID(kp=10000, ki=50, kd=2500000, rate=rate)  # kp 10000 ki 50 kd 2500000
 
             action = env.action_space.sample()
@@ -174,7 +182,11 @@ if __name__ == "__main__":
             # action["desired_thrust"][0] = 36100
             obs, reward, done, info = env.step(action)
             rgb = env.render("rgb_array")
+
+            log_data.add_data(position=obs["position"][0], orientation=obs["orientation"][0], run_id=run)
+            i += 1
             # print("Orientation:")
             # print(obs["orientation"])
             # print("Position:")
             # print(obs["position"])
+    log_data.save_to_csv()
