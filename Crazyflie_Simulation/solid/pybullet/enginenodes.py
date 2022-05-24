@@ -74,8 +74,8 @@ class AttitudePID(EngineNode):
         # for idx, ang in enumerate(current_attitude_euler):
         #     current_attitude_deg[idx] = ang * 180 / np.pi
 
-        # print(f"Desired attitude: {desired_attitude[1]}")
-        # print(f"Current attitude: {current_attitude_deg[1]}")
+        print(f"Desired attitude: {desired_attitude}")
+        print(f"Current attitude: {current_attitude_deg}")
 
         next_roll = self.attitude_pid_roll.next_action(current=current_attitude_deg[0], desired=desired_attitude[0])
         next_pitch = self.attitude_pid_pitch.next_action(current=current_attitude_deg[1], desired=desired_attitude[1])
@@ -131,8 +131,8 @@ class AttitudeRatePID(EngineNode):
     def callback(self, t_n: float, desired_rate: Msg, current_rate: Msg):
         current_attitude_rate = current_rate.msgs[-1].data  # (vx, vy, vz) Roll, pitch, yaw
         desired_attitude_rate = desired_rate.msgs[-1].data
-        # print(f"Current rate: {current_attitude_rate[1]}")
-        # print(f"Desired rate: {desired_attitude_rate[1]}")
+        print(f"Current rate: {-current_attitude_rate[1] * 180 / np.pi}")
+        print(f"Desired rate: {desired_attitude_rate[1]}")
         # print("-" * 50)
         next_roll_rate = self.attitude_rate_pid_roll.next_action(current=current_attitude_rate[0],
                                                                  desired=desired_attitude_rate[0])
@@ -545,8 +545,8 @@ class StateEstimator(eagerx.EngineNode):
         attitude_pitch_inverted = self.invert_pitch(attitude)
 
         # print(f"Pybullet  [qx, qy, qz, qw] = {orientation.msgs[-1].data}")
-        print("attitude from pybullet with inverted pitch = ", np.round(attitude_pitch_inverted, 3))
-        print("attitude from state estimator default      = ", np.round(attitude_calculated, 3))
+        # print("attitude from pybullet with inverted pitch = ", np.round(attitude_pitch_inverted, 3))
+        # print("attitude from state estimator default      = ", np.round(attitude_calculated, 3))
         # print("attitude from state estimator madgwick     = ", np.round(attitude_calculated_madgwick, 3))
         print("=" * 80)
         return dict(orientation_state_estimator=Float32MultiArray(data=attitude_calculated),

@@ -3,7 +3,7 @@ from math import sin, cos, pi, sqrt
 
 def crazyflie_ode(x, t, u, mass, gain_constant, time_constant):
     # States are: [x, y, z, x_dot, y_dot, z_dot, phi, theta, thrust_state]
-    # u = [PWM_c, Phi_c, Theta_c] = [10000 to 60000, -1 to 1, -1 to 1]
+    # u = [PWM_c, Phi_c, Theta_c] = [10000 to 60000, deg, deg]
     # param = [mass, gain constant, time constant]
     def force_to_pwm(input_force):
         # Just the inversion of pwm_to_force

@@ -263,22 +263,22 @@ class ValidatePID(eagerx.Node):
                                                                                   high=[1000, 1000, 1000],
                                                                                   )
         # for degrees output
-        # spec.outputs.new_attitude.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
-        #                                                                        [-30, -30, -30],
-        #                                                                        [30, 30, 30], dtype="float32")
-        # for quaternion output
         spec.outputs.new_attitude.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
-                                                                               [-1, -1, -1, -1],
-                                                                               [1, 1, 1, 1], dtype="float32")
+                                                                               [-30, -30, -30],
+                                                                               [30, 30, 30], dtype="float32")
+        # for quaternion output
+        # spec.outputs.new_attitude.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
+        #                                                                        [-1, -1, -1, -1],
+        #                                                                        [1, 1, 1, 1], dtype="float32")
         spec.outputs.new_thrust.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
                                                                              [0],
                                                                              [65535], dtype="float32")
 
     def initialize(self):
         # Define values for kp, ki, kd
-        self.kp_x = 0.1
+        self.kp_x = 0.02    # 0.1
         self.ki_x = 0.0001
-        self.kd_x = 0.3
+        self.kd_x = 0.03    # 0.3
         self.kp_z = 0.2
         self.ki_z = 0.0001
         self.kd_z = 0.4
@@ -309,18 +309,24 @@ class ValidatePID(eagerx.Node):
                                                              desired=desired_position.msgs[-1].data[2])
         next_force_x = self.pid_x.next_action(current=current_position.msgs[-1].data[0],
                                               desired=desired_position.msgs[-1].data[0])
-        next_pwm = np.clip(self.force_to_pwm(np.hypot(next_force_x, next_force_z)), 10000, 60000)
+        next_pitch = np.clip(-np.arctan(next_force_x / next_force_z) * 180 / np.pi, -30, 30)
+        next_thrust = np.cos(next_pitch * np.pi / 180) * next_force_z
+        next_pwm = np.clip(self.force_to_pwm(next_thrust), 10000, 60000)
+
+        if next_force_z <= 0:
+            next_pwm = 14000
 
         # for quaternion
-        next_pitch = np.clip(-np.arctan(next_force_x / next_force_z), -np.pi/6, np.pi/6)
-        next_attitude = np.array(pybullet.getQuaternionFromEuler([0, next_pitch, 0]))
+        # next_pitch = np.clip(-np.arctan(next_force_x / next_force_z), -np.pi/6, np.pi/6)
+        # next_attitude = np.array(pybullet.getQuaternionFromEuler([0, next_pitch, 0]))
 
         # for degrees
-        # next_pitch = np.clip(-np.arctan(next_force_x / next_force_z) * 180 / np.pi, -30, 30)
-        # next_attitude = np.array([0, next_pitch, 0])
 
+        next_attitude = np.array([0, next_pitch, 0])
+        # next_attitude = np.array([0, 30, 0])
         print(50 * '=')
         print(f"next_attitude = {next_attitude}")
+        print(f"next_pwm      = {next_pwm}")
 
         return dict(new_attitude=Float32MultiArray(data=next_attitude),
                     new_thrust=Float32MultiArray(data=np.array([next_pwm])))
