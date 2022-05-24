@@ -172,9 +172,9 @@ class MakePicture(eagerx.Node):
         return dict(image=msg)
 
 
-class PIDNode(eagerx.Node):
+class HeightPID(eagerx.Node):
     @staticmethod
-    @eagerx.register.spec("PIDNode", eagerx.Node)
+    @eagerx.register.spec("HeightPID", eagerx.Node)
     def spec(
             spec,
             name: str,
@@ -196,8 +196,8 @@ class PIDNode(eagerx.Node):
         )
 
         spec.inputs.desired_height.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
-                                                                             [0],
-                                                                             [65535], dtype="float32")
+                                                                                [0],
+                                                                                [65535], dtype="float32")
 
         spec.outputs.new_action.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
                                                                              [0],
@@ -230,9 +230,100 @@ class PIDNode(eagerx.Node):
     @eagerx.register.outputs(new_action=Float32MultiArray)
     def callback(self, t_n: float, current_height: Msg, desired_height: Msg):
         next_force = self.gravity + self.pid.next_action(current=current_height.msgs[-1].data[2],
-                                                    desired=desired_height.msgs[-1].data[0])
+                                                         desired=desired_height.msgs[-1].data[0])
         next_pwm = np.clip(self.force_to_pwm(next_force), 10000, 60000)
         return dict(new_action=Float32MultiArray(data=np.array([next_pwm])))
+
+
+class ValidatePID(eagerx.Node):
+    @staticmethod
+    @eagerx.register.spec("ValidatePID", eagerx.Node)
+    def spec(
+            spec,
+            name: str,
+            rate: float,
+    ):
+        # Modify default node params
+        spec.config.name = name
+        spec.config.rate = rate
+        spec.config.process = eagerx.process.ENVIRONMENT
+        spec.config.inputs = ["current_position", "desired_position"]
+        spec.config.outputs = ["new_attitude", "new_thrust"]
+
+        # Add space converters
+        spec.inputs.current_position.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
+                                                                                  dtype="float32",
+                                                                                  low=[-1000, -1000, 0],
+                                                                                  high=[1000, 1000, 1000],
+                                                                                  )
+
+        spec.inputs.desired_position.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
+                                                                                  dtype="float32",
+                                                                                  low=[-1000, -1000, 0],
+                                                                                  high=[1000, 1000, 1000],
+                                                                                  )
+        # for degrees output
+        # spec.outputs.new_attitude.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
+        #                                                                        [-30, -30, -30],
+        #                                                                        [30, 30, 30], dtype="float32")
+        # for quaternion output
+        spec.outputs.new_attitude.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
+                                                                               [-1, -1, -1, -1],
+                                                                               [1, 1, 1, 1], dtype="float32")
+        spec.outputs.new_thrust.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
+                                                                             [0],
+                                                                             [65535], dtype="float32")
+
+    def initialize(self):
+        # Define values for kp, ki, kd
+        self.kp_x = 0.1
+        self.ki_x = 0.0001
+        self.kd_x = 0.3
+        self.kp_z = 0.2
+        self.ki_z = 0.0001
+        self.kd_z = 0.4
+        self.pid_x = PID(kp=self.kp_x, ki=self.ki_x, kd=self.kd_x, rate=self.rate)
+        self.pid_z = PID(kp=self.kp_z, ki=self.ki_z, kd=self.kd_z, rate=self.rate)
+        self.gravity = 0.027 * 9.81
+
+    @eagerx.register.states()
+    def reset(self):
+        self.pid_x.reset()
+        self.pid_z.reset()
+
+    # Force to PWM
+    @staticmethod
+    def force_to_pwm(force):
+        # Just the inversion of pwm_to_force
+        a = 4 * 2.130295e-11
+        b = 4 * 1.032633e-6
+        c = 5.485e-4 - force
+        d = b ** 2 - 4 * a * c
+        pwm = (-b + np.sqrt(d)) / (2 * a)
+        return pwm
+
+    @eagerx.register.inputs(current_position=Float32MultiArray, desired_position=Float32MultiArray)
+    @eagerx.register.outputs(new_attitude=Float32MultiArray, new_thrust=Float32MultiArray)
+    def callback(self, t_n: float, current_position: Msg, desired_position: Msg):
+        next_force_z = self.gravity + self.pid_z.next_action(current=current_position.msgs[-1].data[2],
+                                                             desired=desired_position.msgs[-1].data[2])
+        next_force_x = self.pid_x.next_action(current=current_position.msgs[-1].data[0],
+                                              desired=desired_position.msgs[-1].data[0])
+        next_pwm = np.clip(self.force_to_pwm(np.hypot(next_force_x, next_force_z)), 10000, 60000)
+
+        # for quaternion
+        next_pitch = np.clip(-np.arctan(next_force_x / next_force_z), -np.pi/6, np.pi/6)
+        next_attitude = np.array(pybullet.getQuaternionFromEuler([0, next_pitch, 0]))
+
+        # for degrees
+        # next_pitch = np.clip(-np.arctan(next_force_x / next_force_z) * 180 / np.pi, -30, 30)
+        # next_attitude = np.array([0, next_pitch, 0])
+
+        print(50 * '=')
+        print(f"next_attitude = {next_attitude}")
+
+        return dict(new_attitude=Float32MultiArray(data=next_attitude),
+                    new_thrust=Float32MultiArray(data=np.array([next_pwm])))
 
 # class AttitudePID(eagerx.Node):
 #     @staticmethod

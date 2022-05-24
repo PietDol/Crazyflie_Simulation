@@ -37,7 +37,8 @@ if __name__ == "__main__":
     urdf_path = os.path.dirname(Crazyflie_Simulation.__file__) + "/solid/assets/"
 
     # Create PID node
-    pid_height = eagerx.Node.make("PIDNode", "pid_height", rate=48)
+    pid_height = eagerx.Node.make("HeightPID", "pid_height", rate=48)
+    validate_pid = eagerx.Node.make("ValidatePID", "validate_pid", rate=48)
 
     # - - - - - - - CHOOSE ENGINE MODE HERE - - - - - - -
     engine_mode = "Pybullet"  # choose between Pybullet and Ode (bridge select)
@@ -86,18 +87,26 @@ if __name__ == "__main__":
         "MakePicture", "make_picture", rate
     )
     # Create agnostic graph
-    graph.add(make_picture)
-    graph.add(crazyflie)
-    graph.add(pid_height)
+    graph.add([make_picture, crazyflie, validate_pid])
+    # graph.add(crazyflie)
+    # graph.add(pid_height)
+    # graph.add(validate_pid)
+
     # Connect Crazyflie inputs
-    graph.connect(action="desired_attitude", target=crazyflie.actuators.commanded_attitude)
+    # graph.connect(action="desired_attitude", target=crazyflie.actuators.commanded_attitude)
+    graph.connect(action="desired_position", target=validate_pid.inputs.desired_position)
     # graph.connect(action="desired_thrust", target=crazyflie.actuators.commanded_thrust)
-    graph.connect(action="desired_height", target=pid_height.inputs.desired_height)
-    graph.connect(source=pid_height.outputs.new_action, target=crazyflie.actuators.commanded_thrust)
+    # graph.connect(action="desired_height", target=pid_height.inputs.desired_height)
+    # graph.connect(source=pid_height.outputs.new_action, target=crazyflie.actuators.commanded_thrust)
+    graph.connect(source=validate_pid.outputs.new_thrust, target=crazyflie.actuators.commanded_thrust)
+    graph.connect(source=validate_pid.outputs.new_attitude, target=crazyflie.actuators.commanded_attitude)
+
     # Connect Crazyflie outputs
     graph.connect(source=crazyflie.sensors.orientation, observation="orientation")
     graph.connect(source=crazyflie.sensors.pos, observation="position")
-    graph.connect(source=crazyflie.sensors.pos, target=pid_height.inputs.current_height)
+    # graph.connect(source=crazyflie.sensors.pos, target=pid_height.inputs.current_height)
+    graph.connect(source=crazyflie.sensors.pos, target=validate_pid.inputs.current_position)
+
     # Connect picture making node
     graph.connect(source=crazyflie.sensors.orientation, target=make_picture.inputs.orientation)
     graph.connect(source=crazyflie.sensors.pos, target=make_picture.inputs.position)
@@ -107,7 +116,6 @@ if __name__ == "__main__":
     if real_reset:
         # Connect target state we are resetting
         graph.connect(action="pwm_input", target=crazyflie.actuators)
-
 
     # Show in the gui
     # graph.gui()
@@ -153,15 +161,6 @@ if __name__ == "__main__":
 
         return states
 
-    def force_to_pwm(force):
-        # Just the inversion of pwm_to_force
-        a = 4 * 2.130295e-11
-        b = 4 * 1.032633e-6
-        c = 5.485e-4 - force
-        d = b ** 2 - 4 * a * c
-        pwm = (-b + np.sqrt(d)) / (2 * a)
-        return pwm
-
     # Initialize Environment
     env = EagerxEnv(name="rx", rate=rate, graph=graph, engine=engine, step_fn=step_fn, reset_fn=reset_fn, exclude=[])
 
@@ -172,14 +171,15 @@ if __name__ == "__main__":
     for eps in range(5000):
         print(f"Episode {eps}")
         _, done = env.reset(), False
-        desired_altitude = 2
-        desired_thrust_pid = PID(kp=0.2, ki=0.0001, kd=0.4, rate=rate)  # kp 10000 ki 50 kd 2500000
+        # desired_altitude = 2
+        # desired_thrust_pid = PID(kp=0.2, ki=0.0001, kd=0.4, rate=rate)  # kp 10000 ki 50 kd 2500000
         while not done:
 
             action = env.action_space.sample()
-            action["desired_attitude"][0] = 0  # Roll
-            action["desired_attitude"][1] = 0  # Pitch
-            action["desired_attitude"][2] = 0  # Yaw
-            action["desired_height"] = np.array([desired_altitude])
+            # action["desired_attitude"][0] = 0  # Roll
+            # action["desired_attitude"][1] = 0  # Pitch
+            # action["desired_attitude"][2] = 0  # Yaw
+            # action["desired_height"] = np.array([desired_altitude])
+            action["desired_position"] = np.array([1, 0, 1])
             obs, reward, done, info = env.step(action)
             rgb = env.render("rgb_array")
