@@ -244,7 +244,7 @@ class Crazyflie(Object):
         graph.connect(source=vel.outputs.obs, target=accelerometer.inputs.input_velocity, window=2)
         graph.connect(source=pos.outputs.obs, sensor="pos")
         graph.connect(source=vel.outputs.obs, sensor="vel")
-        graph.connect(source=orientation.outputs.obs, sensor="orientation")
+        # graph.connect(source=orientation.outputs.obs, sensor="orientation")
         graph.connect(source=gyroscope.outputs.obs, sensor="gyroscope")
         graph.connect(source=accelerometer.outputs.obs, sensor="accelerometer")
         graph.connect(actuator="commanded_attitude", target=attitude_pid.inputs.desired_attitude)
@@ -258,8 +258,9 @@ class Crazyflie(Object):
         graph.connect(source=orientation.outputs.obs, target=state_estimator.inputs.orientation)
 
         # todo: connect output state_estimator to attitude_pid.inputs.current_attitude
-        # graph.connect(source=state_estimator.outputs.orientation, target=attitude_pid.inputs.current_attitude)
-        graph.connect(source=orientation.outputs.obs, target=attitude_pid.inputs.current_attitude)
+        graph.connect(source=state_estimator.outputs.orientation, target=attitude_pid.inputs.current_attitude)
+        graph.connect(source=state_estimator.outputs.orientation, sensor="orientation")
+        # graph.connect(source=orientation.outputs.obs, target=attitude_pid.inputs.current_attitude)
 
         # graph.gui()
         # Check graph validity (commented out)
