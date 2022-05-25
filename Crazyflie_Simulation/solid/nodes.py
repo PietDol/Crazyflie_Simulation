@@ -312,15 +312,17 @@ class ValidatePID(eagerx.Node):
 
     def initialize(self):
         # Define values for kp, ki, kd
-        self.kp_x = 0.05    # 0.05
+        self.kp_x = 0.05  # 0.05
         self.ki_x = 0.0001
-        self.kd_x = 0.06    # 0.06
+        self.kd_x = 0.06  # 0.06
         self.kp_z = 0.2
         self.ki_z = 0.0001
         self.kd_z = 0.4
         self.pid_x = PID(kp=self.kp_x, ki=self.ki_x, kd=self.kd_x, rate=self.rate)
         self.pid_z = PID(kp=self.kp_z, ki=self.ki_z, kd=self.kd_z, rate=self.rate)
         self.gravity = 0.027 * 9.81
+
+        self.i = 0
 
     @eagerx.register.states()
     def reset(self):
@@ -341,10 +343,15 @@ class ValidatePID(eagerx.Node):
     @eagerx.register.inputs(current_position=Float32MultiArray, desired_position=Float32MultiArray)
     @eagerx.register.outputs(new_attitude=Float32MultiArray, new_thrust=Float32MultiArray)
     def callback(self, t_n: float, current_position: Msg, desired_position: Msg):
-        next_force_z = self.gravity + self.pid_z.next_action(current=current_position.msgs[-1].data[2],
-                                                             desired=desired_position.msgs[-1].data[2])
-        next_force_x = self.pid_x.next_action(current=current_position.msgs[-1].data[0],
-                                              desired=desired_position.msgs[-1].data[0])
+        current_pos = current_position.msgs[-1].data
+        # setpoint = desired_position.msgs[-1].data
+        # Choose your validate function
+        setpoint = self.eight_trajectory()
+        print(setpoint)
+        next_force_z = self.gravity + self.pid_z.next_action(current=current_pos[2],
+                                                             desired=setpoint[2])
+        next_force_x = self.pid_x.next_action(current=current_pos[0],
+                                              desired=setpoint[0])
         next_pitch = np.clip(-np.arctan(next_force_x / next_force_z) * 180 / np.pi, -30, 30)
         next_thrust = np.cos(next_pitch * np.pi / 180) * next_force_z
         next_pwm = np.clip(self.force_to_pwm(next_thrust), 10000, 60000)
@@ -360,6 +367,7 @@ class ValidatePID(eagerx.Node):
         # next_pitch = np.clip(next_pitch, -30, 30)
 
         # for degrees
+        # next_pitch = 30
         next_attitude = np.array([0, next_pitch, 0])
         # next_attitude = np.array([0, 30, 0])
         # print(f"next_attitude = {next_attitude}")
@@ -367,6 +375,68 @@ class ValidatePID(eagerx.Node):
 
         return dict(new_attitude=Float32MultiArray(data=next_attitude),
                     new_thrust=Float32MultiArray(data=np.array([next_pwm])))
+
+    def circular_trajectory(self, radius=1, origin=[0, 0, 2], speed=1):
+        circle_length = radius * 2 * np.pi
+        time = circle_length / speed
+        steps = int(time * self.rate)
+        theta = np.linspace(-np.pi / 2, 3 / 2 * np.pi, steps)
+
+        i = self.i % steps
+        x = np.cos(theta[i]) * radius
+        y = 0
+        z = np.sin(theta[i]) * radius
+        setpoint = np.array([x + origin[0], y, z + origin[2]])
+
+        self.i += 1
+
+        return setpoint
+
+    def triangular_trajectory(self, line_length=2, startpoint=[0, 0, 1], speed=1):
+        time = line_length * 6 / speed
+        steps = int(time * self.rate)
+        startpoint = np.array(startpoint)
+        point1 = startpoint
+        point2 = point1 + np.array([line_length, 0, 0])
+        point3 = point2 + np.array([-np.cos(np.pi / 3) * line_length, 0, np.sin(np.pi / 3) * line_length])
+        points = np.array([point2, point3, point1])
+
+        i = self.i % steps
+        if i < steps / 3:
+            setpoint = points[0]
+        elif i < 2 * steps / 3:
+            setpoint = points[1]
+        else:
+            setpoint = points[2]
+
+        self.i += 1
+
+        return setpoint
+
+    def eight_trajectory(self, radius=1, origin=[0, 0, 2], speed=0.5):
+        origin = np.array(origin)
+        origin_r = np.array([radius, 0, 0]) + origin
+        origin_l = np.array([-radius, 0, 0]) + origin
+        circle_length = radius * 2 * np.pi
+        time = circle_length / speed
+        steps = int(time * self.rate)
+        theta = np.linspace(-np.pi, np.pi, steps)
+
+        i = self.i % steps
+        if self.i / steps % 2 <= 1:
+            x = np.cos(theta[i]) * radius
+            y = 0
+            z = np.sin(theta[i]) * radius
+            setpoint = np.array([x + origin_r[0], y, z + origin_r[2]])
+        else:
+            x = np.cos(theta[i]) * radius
+            y = 0
+            z = np.sin(theta[i]) * radius
+            setpoint = np.array([- x + origin_l[0], y, z + origin_l[2]])
+
+        self.i += 1
+
+        return setpoint
 
 # class AttitudePID(eagerx.Node):
 #     @staticmethod
