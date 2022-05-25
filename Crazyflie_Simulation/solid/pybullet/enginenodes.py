@@ -48,9 +48,10 @@ class AttitudePID(EngineNode):
                                                                                     [90, 90, 90], dtype="float32")
 
     def initialize(self):
+        # rate / 2 -> so error * 2 and dt * 2 -> so kp / 2 and ki / 4 and kd = kd
         self.attitude_pid_yaw = PID(kp=6, ki=1, kd=0.35, rate=self.rate)
-        self.attitude_pid_pitch = PID(kp=6, ki=3, kd=0, rate=self.rate)
-        self.attitude_pid_roll = PID(kp=6, ki=3, kd=0, rate=self.rate)
+        self.attitude_pid_pitch = PID(kp=12, ki=12, kd=0, rate=self.rate) # 6, 3, 0
+        self.attitude_pid_roll = PID(kp=12, ki=12, kd=0, rate=self.rate)  # 6, 3, 0
 
     @eagerx.register.states()
     def reset(self):
@@ -131,8 +132,8 @@ class AttitudeRatePID(EngineNode):
     def callback(self, t_n: float, desired_rate: Msg, current_rate: Msg):
         current_attitude_rate = current_rate.msgs[-1].data  # (vx, vy, vz) Roll, pitch, yaw
         desired_attitude_rate = desired_rate.msgs[-1].data
-        print(f"Current rate: {-current_attitude_rate[1] * 180 / np.pi}")
-        print(f"Desired rate: {desired_attitude_rate[1]}")
+        # print(f"Current rate: {-current_attitude_rate[1] * 180 / np.pi}")
+        # print(f"Desired rate: {desired_attitude_rate[1]}")
         # print("-" * 50)
         next_roll_rate = self.attitude_rate_pid_roll.next_action(current=current_attitude_rate[0],
                                                                  desired=desired_attitude_rate[0])
@@ -548,7 +549,7 @@ class StateEstimator(eagerx.EngineNode):
         # print("attitude from pybullet with inverted pitch = ", np.round(attitude_pitch_inverted, 3))
         # print("attitude from state estimator default      = ", np.round(attitude_calculated, 3))
         # print("attitude from state estimator madgwick     = ", np.round(attitude_calculated_madgwick, 3))
-        print("=" * 80)
+        # print("=" * 80)
         return dict(orientation_state_estimator=Float32MultiArray(data=attitude_calculated),
                     orientation_pybullet=Float32MultiArray(data=attitude_pitch_inverted))
 

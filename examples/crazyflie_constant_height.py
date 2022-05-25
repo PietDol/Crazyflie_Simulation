@@ -41,7 +41,7 @@ if __name__ == "__main__":
     validate_pid = eagerx.Node.make("ValidatePID", "validate_pid", rate=48)
 
     # - - - - - - - CHOOSE ENGINE MODE HERE - - - - - - -
-    engine_mode = "Pybullet"  # choose between Pybullet and Ode (bridge select)
+    engine_mode = "Ode"  # choose between Pybullet and Ode (bridge select)
 
     if engine_mode == "Pybullet":
         # - - - - - - - PYBULLET START - - - - - - -
@@ -180,6 +180,6 @@ if __name__ == "__main__":
             # action["desired_attitude"][1] = 0  # Pitch
             # action["desired_attitude"][2] = 0  # Yaw
             # action["desired_height"] = np.array([desired_altitude])
-            action["desired_position"] = np.array([1, 0, 1])
+            action["desired_position"] = np.array([2, 0, 2])
             obs, reward, done, info = env.step(action)
             rgb = env.render("rgb_array")

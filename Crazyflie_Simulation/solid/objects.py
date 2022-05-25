@@ -220,9 +220,9 @@ class Crazyflie(Object):
         spec.PybulletEngine.states.lateral_friction = EngineState.make("PbDynamics", parameter="lateralFriction")
 
         # Create PID engine nodes
-        attitude_pid = EngineNode.make("AttitudePID", "attitude_pid", rate=220, n=3)
-        attitude_rate_pid = EngineNode.make("AttitudeRatePID", "attitude_rate_pid", rate=220, n=3)
-        power_distribution = EngineNode.make("PowerDistribution", "power_distribution", rate=220, n=3)
+        attitude_pid = EngineNode.make("AttitudePID", "attitude_pid", rate=spec.sensors.pos.rate, n=3)
+        attitude_rate_pid = EngineNode.make("AttitudeRatePID", "attitude_rate_pid", rate=spec.sensors.pos.rate, n=3)
+        power_distribution = EngineNode.make("PowerDistribution", "power_distribution", rate=spec.sensors.pos.rate, n=3)
         # Create actuator engine nodes
         # Rate=None, but we will connect it to an actuator (thus will use the rate set in the agnostic specification)
         external_force = EngineNode.make(
@@ -271,7 +271,7 @@ class Crazyflie(Object):
         graph.connect(source=state_estimator.outputs.orientation_pybullet, sensor="orientation")
         # graph.connect(source=orientation.outputs.obs, target=attitude_pid.inputs.current_attitude)
 
-        graph.gui()
+        # graph.gui()
         # Check graph validity (commented out)
         # graph.is_valid(plot=True)
 

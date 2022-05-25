@@ -276,9 +276,9 @@ class ValidatePID(eagerx.Node):
 
     def initialize(self):
         # Define values for kp, ki, kd
-        self.kp_x = 0.02    # 0.1
+        self.kp_x = 0.05    # 0.05
         self.ki_x = 0.0001
-        self.kd_x = 0.03    # 0.3
+        self.kd_x = 0.06    # 0.06
         self.kp_z = 0.2
         self.ki_z = 0.0001
         self.kd_z = 0.4
@@ -320,9 +320,11 @@ class ValidatePID(eagerx.Node):
         # next_pitch = np.clip(-np.arctan(next_force_x / next_force_z), -np.pi/6, np.pi/6)
         # next_attitude = np.array(pybullet.getQuaternionFromEuler([0, next_pitch, 0]))
 
-        # for degrees
+        # next_pitch = (current_position.msgs[-1].data[0] - 1) * 10
+        # next_pitch = np.clip(next_pitch, -30, 30)
 
-        next_attitude = np.array([0, next_pitch, 0])
+        # for degrees
+        next_attitude = np.array([0, -next_pitch, 0])
         # next_attitude = np.array([0, 30, 0])
         print(50 * '=')
         print(f"next_attitude = {next_attitude}")
