@@ -160,8 +160,8 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
             desired_thrust_pid = PID(kp=10000, ki=50, kd=2500000, rate=rate)  # kp 10000 ki 50 kd 2500000
 
             action = env.action_space.sample()
-            action["desired_attitude"][0] = 0  # Roll
-            action["desired_attitude"][1] = 10  # Pitch
+            action["desired_attitude"][0] = 10  # Roll
+            action["desired_attitude"][1] = 0  # Pitch
             action["desired_attitude"][2] = 0  # Yaw
             try:
                 action["desired_thrust"][0] = desired_thrust_pid.next_action(current=obs["position"][0][2],

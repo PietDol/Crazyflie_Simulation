@@ -130,6 +130,7 @@ class MakePicture(eagerx.Node):
         if self.engine_mode == "Ode":
             roll, pitch, yaw = roll*-180/np.pi, pitch*-180/np.pi, yaw*-180/np.pi
 
+
         img = np.zeros((self.height, self.width, 3), np.uint8)
         img[:, :] = (255, 255, 255)
 
