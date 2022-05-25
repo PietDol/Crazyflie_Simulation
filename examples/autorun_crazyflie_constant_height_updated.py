@@ -29,7 +29,7 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
         real_reset = False
         rate = 220  # 220?
         safe_rate = 220
-        max_steps = 200
+        max_steps = 4000
 
         # Initialize empty graph
         graph = Graph.create()
@@ -39,7 +39,7 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
 
         # Create PID node
         pid_height = eagerx.Node.make("HeightPID", "pid_height", rate=48)
-        validate_pid = eagerx.Node.make("ValidatePID", "validate_pid", rate=48)
+        validate_pid = eagerx.Node.make("ValidatePID", "validate_pid", rate=48, engine_mode=engine_mode)
 
         # - - - - - - - CHOOSE ENGINE MODE HERE - - - - - - -
         # engine_mode = "Pybullet"  # choose between Pybullet and Ode (bridge select)
@@ -88,8 +88,8 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
             "MakePicture", "make_picture", rate,
             save_render_image=save_render_image,
             saveToPreviousRender=saveToPreviousRender,
-            renderColor=renderColor, #choose between black, red, blue
-            axisToPlot=axisToPlot, #choose between x, y
+            renderColor=renderColor,  # choose between black, red, blue
+            axisToPlot=axisToPlot,  # choose between x, y
             max_steps=max_steps,
             engine_mode=engine_mode,
         )
@@ -118,6 +118,9 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
         graph.connect(source=crazyflie.sensors.orientation, target=make_picture.inputs.orientation)
         graph.connect(source=crazyflie.sensors.pos, target=make_picture.inputs.position)
         graph.render(source=make_picture.outputs.image, rate=rate)
+
+        # Output time
+        graph.connect(source=make_picture.outputs.time, observation="time")
 
         # Create reset node
         if real_reset:
@@ -149,7 +152,6 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
             # done = False
             return obs, rwd, done, info
 
-
         # Define reset function
         def reset_fn(env):
             states = env.state_space.sample()
@@ -157,17 +159,18 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
             if engine_mode == "Pybullet":
                 # Reset states for Pybullet engine
                 states["crazyflie/orientation"] = np.array([0, 0, 0, 1])
-                states["crazyflie/pos"] = np.array([0, 0, 1])
+                states["crazyflie/pos"] = np.array([0, 0, 2])
             elif engine_mode == "Ode":
                 # States are: [x, y, z, x_dot, y_dot, z_dot, phi, theta, thrust_state]
-                states["crazyflie/model_state"] = np.array([0, 0, 1, 0, 0, 0, 0, 0, 0])
+                states["crazyflie/model_state"] = np.array([0, 0, 2, 0, 0, 0, 0, 0, 0])
             else:
                 raise "Wrong engine_mode selected. Please choose between Pybullet and Ode"
 
             return states
 
         # Initialize Environment
-        env = EagerxEnv(name="rx", rate=rate, graph=graph, engine=engine, step_fn=step_fn, reset_fn=reset_fn, exclude=[])
+        env = EagerxEnv(name="rx", rate=rate, graph=graph, engine=engine, step_fn=step_fn, reset_fn=reset_fn,
+                        exclude=[])
 
         # First train in simulation
         # env.render("human")
@@ -187,13 +190,17 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
             obs, reward, done, info = env.step(action)
             rgb = env.render("rgb_array")
 
-            log.add_data(position=obs["position"][0], orientation=obs["orientation"][0], run_id=run_id, rate=rate)
+            # Debug
+            # print(f'The time from the environment obs  = {obs["time"][0]}')
+            # print("=" * 80)
 
+            log.add_data(position=obs["position"][0], orientation=obs["orientation"][0], run_id=run_id, rate=rate,
+                         timestamp=obs["time"][0])
 
 
 log = Log(unique_file=False)
 
-#RUN
+# RUN
 axisToPlot = "x"
 runEagerX("Pybullet",  # first run
           save_render_image=True,
@@ -201,12 +208,6 @@ runEagerX("Pybullet",  # first run
           renderColor="black",
           axisToPlot=axisToPlot,
           run_id=1)
-runEagerX("Pybullet",  # first run
-          save_render_image=True,
-          saveToPreviousRender=False,
-          renderColor="black",
-          axisToPlot=axisToPlot,
-          run_id=3)
 # #
 
 runEagerX("Ode",  # second run
