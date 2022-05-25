@@ -8,6 +8,7 @@ import Crazyflie_Simulation  # Registers objects # noqa # pylint: disable=unused
 import eagerx_reality  # Registers Engine # noqa # pylint: disable=unused-import
 import Crazyflie_Simulation.solid.nodes
 from Crazyflie_Simulation.solid.pid import PID
+from Crazyflie_Simulation.solid.log import Log
 
 # Other
 import numpy as np
@@ -122,6 +123,7 @@ if __name__ == "__main__":
         # Connect target state we are resetting
         graph.connect(action="pwm_input", target=crazyflie.actuators)
 
+
     # Show in the gui
     # graph.gui()
     # graph.is_valid(plot=True)
@@ -166,15 +168,19 @@ if __name__ == "__main__":
 
         return states
 
+
     # Initialize Environment
     env = EagerxEnv(name="rx", rate=rate, graph=graph, engine=engine, step_fn=step_fn, reset_fn=reset_fn, exclude=[])
 
     # First train in simulation
     # env.render("human")
 
+    # Create log object
+    log_data = Log(unique_file=False, rate=rate)
     # Evaluate
-    for eps in range(5000):
-        print(f"Episode {eps}")
+    for run in [2, 1, 3]:
+        print(f"Episode {run}")
+        i = 0
         _, done = env.reset(), False
         # desired_altitude = 2
         # desired_thrust_pid = PID(kp=0.2, ki=0.0001, kd=0.4, rate=rate)  # kp 10000 ki 50 kd 2500000
