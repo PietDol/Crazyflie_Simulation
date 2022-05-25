@@ -8,6 +8,7 @@ import Crazyflie_Simulation  # Registers objects # noqa # pylint: disable=unused
 import eagerx_reality  # Registers Engine # noqa # pylint: disable=unused-import
 import Crazyflie_Simulation.solid.nodes
 from Crazyflie_Simulation.solid.pid import PID
+from Crazyflie_Simulation.solid.log import Log
 
 # Other
 import numpy as np
@@ -28,7 +29,7 @@ if __name__ == "__main__":
     real_reset = False
     rate = 220  # 220?
     safe_rate = 220
-    max_steps = 300
+    max_steps = 1000
 
     # Initialize empty graph
     graph = Graph.create()
@@ -41,7 +42,7 @@ if __name__ == "__main__":
     validate_pid = eagerx.Node.make("ValidatePID", "validate_pid", rate=48)
 
     # - - - - - - - CHOOSE ENGINE MODE HERE - - - - - - -
-    engine_mode = "Pybullet"  # choose between Pybullet and Ode (bridge select)
+    # engine_mode = "Pybullet"  # choose between Pybullet and Ode (bridge select)
 
     if engine_mode == "Pybullet":
         # - - - - - - - PYBULLET START - - - - - - -
@@ -85,11 +86,12 @@ if __name__ == "__main__":
     # Add picture making node and EDIT CONFIGURATION
     make_picture = eagerx.Node.make(
         "MakePicture", "make_picture", rate,
-        save_render_image=True,
-        saveToPreviousRender=False,
-        renderColor="black", #choose between black, red, blue
-        axisToPlot="x", #choose between x, y
+        save_render_image=save_render_image,
+        saveToPreviousRender=saveToPreviousRender,
+        renderColor=renderColor, #choose between black, red, blue
+        axisToPlot=axisToPlot, #choose between x, y
         max_steps=max_steps,
+        engine_mode=engine_mode,
     )
     # Create agnostic graph
     graph.add([make_picture, crazyflie, validate_pid])
@@ -142,11 +144,9 @@ if __name__ == "__main__":
             done = True
             info["TimeLimit.truncated"] = True
         else:
-            done = False | (np.linalg.norm(can[:2]) > 1.0)  # Can is out of reach
-            if done:
-                rwd = -50
+            done = False
         # done = done | (np.linalg.norm(goal - can) < 0.1 and can[2] < 0.05)  # Can has not fallen down & within threshold.
-        done = False
+        # done = False
         return obs, rwd, done, info
 
 
@@ -171,25 +171,20 @@ if __name__ == "__main__":
 
     # First train in simulation
     # env.render("human")
-    i = 0
+
+    _, done = env.reset(), False
     # Evaluate
-    for eps in range(5000):
-        print(f"Episode {eps}")
-        _, done = env.reset(), False
-        # desired_altitude = 2
-        # desired_thrust_pid = PID(kp=0.2, ki=0.0001, kd=0.4, rate=rate)  # kp 10000 ki 50 kd 2500000
-        while not done:
 
-            action = env.action_space.sample()
-            # action["desired_attitude"][0] = 0  # Roll
-            # action["desired_attitude"][1] = 0  # Pitch
-            # action["desired_attitude"][2] = 0  # Yaw
-            # action["desired_height"] = np.array([desired_altitude])
-            action["desired_position"] = np.array([0, 0, 1])
-            obs, reward, done, info = env.step(action)
-            rgb = env.render("rgb_array")
-            i += 1
+    # desired_altitude = 2
+    # desired_thrust_pid = PID(kp=0.2, ki=0.0001, kd=0.4, rate=rate)  # kp 10000 ki 50 kd 2500000
+    while not done:
+        action = env.action_space.sample()
+        # action["desired_attitude"][0] = 0  # Roll
+        # action["desired_attitude"][1] = 0  # Pitch
+        # action["desired_attitude"][2] = 0  # Yaw
+        # action["desired_height"] = np.array([desired_altitude])
+        action["desired_position"] = np.array([0, 0, 6])
+        obs, reward, done, info = env.step(action)
+        rgb = env.render("rgb_array")
 
-            # if i > 150:
-            #     done = True
-            #     i = 0
+        log.add_data(position=obs["position"][0], orientation=obs["orientation"][0], run_id=run_id, rate=rate)

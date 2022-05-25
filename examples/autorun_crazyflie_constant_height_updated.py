@@ -7,6 +7,7 @@ import eagerx_pybullet  # Registers PybulletEngine # noqa # pylint: disable=unus
 import Crazyflie_Simulation  # Registers objects # noqa # pylint: disable=unused-import
 import eagerx_reality  # Registers Engine # noqa # pylint: disable=unused-import
 import Crazyflie_Simulation.solid.nodes
+from Crazyflie_Simulation.solid.log import Log
 from Crazyflie_Simulation.solid.pid import PID
 
 # Other
@@ -20,7 +21,7 @@ LOG_DIR = os.path.dirname(
     Crazyflie_Simulation.__file__) + f"/../logs/{NAME}_{datetime.today().strftime('%Y-%m-%d-%H%M')}"
 
 # todo: check the windows and rates
-def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor, axisToPlot):
+def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor, axisToPlot, run_id):
     if __name__ == "__main__":
         eagerx.initialize("eagerx_core", anonymous=True, log_level=eagerx.log.WARN)
 
@@ -90,6 +91,7 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
             renderColor=renderColor, #choose between black, red, blue
             axisToPlot=axisToPlot, #choose between x, y
             max_steps=max_steps,
+            engine_mode=engine_mode,
         )
         # Create agnostic graph
         graph.add([make_picture, crazyflie, validate_pid])
@@ -169,21 +171,27 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
 
         # First train in simulation
         # env.render("human")
+
         _, done = env.reset(), False
         # Evaluate
 
         # desired_altitude = 2
         # desired_thrust_pid = PID(kp=0.2, ki=0.0001, kd=0.4, rate=rate)  # kp 10000 ki 50 kd 2500000
         while not done:
-
             action = env.action_space.sample()
             # action["desired_attitude"][0] = 0  # Roll
             # action["desired_attitude"][1] = 0  # Pitch
             # action["desired_attitude"][2] = 0  # Yaw
             # action["desired_height"] = np.array([desired_altitude])
-            action["desired_position"] = np.array([1, 0, 3])
+            action["desired_position"] = np.array([0, 0, 6])
             obs, reward, done, info = env.step(action)
             rgb = env.render("rgb_array")
+
+            log.add_data(position=obs["position"][0], orientation=obs["orientation"][0], run_id=run_id, rate=rate)
+
+
+
+log = Log(unique_file=False)
 
 #RUN
 axisToPlot = "x"
@@ -191,10 +199,15 @@ runEagerX("Pybullet",  # first run
           save_render_image=True,
           saveToPreviousRender=False,
           renderColor="black",
-          axisToPlot=axisToPlot)
+          axisToPlot=axisToPlot,
+          run_id=1)
+# #
 
-# runEagerX("Ode",  # second run
-#           save_render_image=True,
-#           saveToPreviousRender=True,
-#           renderColor="red",
-#           axisToPlot=axisToPlot)
+runEagerX("Ode",  # second run
+          save_render_image=True,
+          saveToPreviousRender=True,
+          renderColor="red",
+          axisToPlot=axisToPlot,
+          run_id=2)
+
+log.save_to_csv()

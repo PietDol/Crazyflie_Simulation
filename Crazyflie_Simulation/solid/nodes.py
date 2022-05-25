@@ -26,6 +26,7 @@ class MakePicture(eagerx.Node):
             renderColor: str,
             axisToPlot: str,
             max_steps: int,
+            engine_mode: str,
     ):
         # Performs all the steps to fill-in the params with registered info about all functions.
         spec.initialize(MakePicture)
@@ -42,6 +43,7 @@ class MakePicture(eagerx.Node):
         spec.config.renderColor = renderColor if renderColor else "black"
         spec.config.axisToPlot = axisToPlot if axisToPlot else "x"
         spec.config.max_steps = max_steps if max_steps else 500
+        spec.config.engine_mode = engine_mode if engine_mode else "Pybullet"
 
         # Add space converters
         spec.inputs.position.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
@@ -50,7 +52,7 @@ class MakePicture(eagerx.Node):
         spec.inputs.orientation.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
                                                                              [0, 0, 0],
                                                                              [3, 3, 3], dtype="float32")
-    def initialize(self, save_render_image, saveToPreviousRender, renderColor, axisToPlot, max_steps):
+    def initialize(self, save_render_image, saveToPreviousRender, renderColor, axisToPlot, max_steps, engine_mode):
         # Change render settings here
         self.height = 880                       # set render height [px]
         self.width = 880                        # set render width [px]
@@ -60,7 +62,7 @@ class MakePicture(eagerx.Node):
         self.text_height = 4
         self.font = cv2.FONT_HERSHEY_PLAIN
         self.xrange = [-2, 2]                   # range of x (x in 2D image = to right) [m]
-        self.yrange = [0, 4]                    # range of y (y in 2D image = up) [m]
+        self.yrange = [0, 6]                    # range of y (y in 2D image = up) [m]
         self.amountOfDivisions = 9              # amount of divisions on axis, def=9
 
         # set drone arm lengths
@@ -71,10 +73,13 @@ class MakePicture(eagerx.Node):
         self.saveToPreviousRender = saveToPreviousRender # saves render on top of last render
         self.renderColor = renderColor # blue, red or black for now
         self.axis_to_plot = axisToPlot # 'x' or 'y' right now
-        self.sample_length = 3 #HARDCODE
+        self.sample_length = (0.7*max_steps)/(self.rate) - self.timestep #ensure it is rendered at least once, #HARDCODE
         # (0.95*max_steps)/(self.rate) - self.timestep #ensure it is rendered at least once, def=2
 
         # AUTO INITIALIZATIONS
+        self.engine_mode = engine_mode
+        print(self.engine_mode)
+
         # init initial image
         self.modulus_prev = 1000
         if self.saveToPreviousRender == True:
@@ -120,6 +125,10 @@ class MakePicture(eagerx.Node):
         else:
             euler_orientation = np.array(orientation.msgs[-1].data) * np.pi / 180
         roll, pitch, yaw = euler_orientation[0], -euler_orientation[1], euler_orientation[2]
+
+        #HARDCODED CORRECTION FOR Ode
+        if self.engine_mode == "Ode":
+            roll, pitch, yaw = roll*-180/np.pi, pitch*-180/np.pi, yaw*-180/np.pi
 
         img = np.zeros((self.height, self.width, 3), np.uint8)
         img[:, :] = (255, 255, 255)
@@ -199,6 +208,10 @@ class MakePicture(eagerx.Node):
                     elif self.axis_to_plot == 'y':
                         self.final_image = plot_y(self.final_image)
                 else:
+                    if self.axis_to_plot == 'x':
+                        self.final_image = plot_x(self.final_image)
+                    elif self.axis_to_plot == 'y':
+                        self.final_image = plot_y(self.final_image)
                     cv2.imwrite(f'../Crazyflie_Simulation/solid/Rendering/Images/final_image.png', self.final_image)
 
         self.modulus_prev = t_n % self.timestep
@@ -346,8 +359,8 @@ class ValidatePID(eagerx.Node):
         current_pos = current_position.msgs[-1].data
         # setpoint = desired_position.msgs[-1].data
         # Choose your validate function
-        setpoint = self.line_trajectory()
-        print(setpoint)
+        setpoint = self.eight_trajectory()
+        # print(setpoint)
         next_force_z = self.gravity + self.pid_z.next_action(current=current_pos[2],
                                                              desired=setpoint[2])
         next_force_x = self.pid_x.next_action(current=current_pos[0],
@@ -368,7 +381,7 @@ class ValidatePID(eagerx.Node):
 
         # for degrees
         # next_pitch = 30
-        next_attitude = np.array([0, next_pitch, 0])
+        next_attitude = np.array([0, -next_pitch, 0])
         # next_attitude = np.array([0, 30, 0])
         # print(f"next_attitude = {next_attitude}")
         # print(f"next_pwm      = {next_pwm}")
