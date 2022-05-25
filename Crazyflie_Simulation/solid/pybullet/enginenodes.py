@@ -75,8 +75,8 @@ class AttitudePID(EngineNode):
         # for idx, ang in enumerate(current_attitude_euler):
         #     current_attitude_deg[idx] = ang * 180 / np.pi
 
-        print(f"Desired attitude: {desired_attitude}")
-        print(f"Current attitude: {current_attitude_deg}")
+        # print(f"Desired attitude: {desired_attitude}")
+        # print(f"Current attitude: {current_attitude_deg}")
 
         next_roll = self.attitude_pid_roll.next_action(current=current_attitude_deg[0], desired=desired_attitude[0])
         next_pitch = self.attitude_pid_pitch.next_action(current=current_attitude_deg[1], desired=desired_attitude[1])

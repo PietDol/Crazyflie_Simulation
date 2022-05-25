@@ -41,7 +41,7 @@ if __name__ == "__main__":
     validate_pid = eagerx.Node.make("ValidatePID", "validate_pid", rate=48)
 
     # - - - - - - - CHOOSE ENGINE MODE HERE - - - - - - -
-    engine_mode = "Ode"  # choose between Pybullet and Ode (bridge select)
+    engine_mode = "Pybullet"  # choose between Pybullet and Ode (bridge select)
 
     if engine_mode == "Pybullet":
         # - - - - - - - PYBULLET START - - - - - - -
@@ -89,6 +89,7 @@ if __name__ == "__main__":
         saveToPreviousRender=False,
         renderColor="black", #choose between black, red, blue
         axisToPlot="x", #choose between x, y
+        max_steps=max_steps,
     )
     # Create agnostic graph
     graph.add([make_picture, crazyflie, validate_pid])

@@ -71,7 +71,8 @@ class MakePicture(eagerx.Node):
         self.saveToPreviousRender = saveToPreviousRender # saves render on top of last render
         self.renderColor = renderColor # blue, red or black for now
         self.axis_to_plot = axisToPlot # 'x' or 'y' right now
-        self.sample_length = (0.95*max_steps)/(self.rate) - self.timestep #ensure it is rendered at least once, def=2
+        self.sample_length = 3 #HARDCODE
+        # (0.95*max_steps)/(self.rate) - self.timestep #ensure it is rendered at least once, def=2
 
         # AUTO INITIALIZATIONS
         # init initial image
@@ -104,7 +105,6 @@ class MakePicture(eagerx.Node):
         self.scaling_y = (self.height-2*self.offset)/(max(self.y_axis)-min(self.y_axis))
         self.offset_left = abs(min(self.x_axis)/(max(self.x_axis)-min(self.x_axis))*(self.width-2*self.offset)) # set offset
         self.offset_top= abs(max(self.y_axis)/(max(self.y_axis)-min(self.y_axis))*(self.height-2*self.offset))
-
 
     @eagerx.register.states()
     def reset(self):
@@ -360,11 +360,10 @@ class ValidatePID(eagerx.Node):
         # next_pitch = np.clip(next_pitch, -30, 30)
 
         # for degrees
-        next_attitude = np.array([0, -next_pitch, 0])
+        next_attitude = np.array([0, next_pitch, 0])
         # next_attitude = np.array([0, 30, 0])
-        print(50 * '=')
-        print(f"next_attitude = {next_attitude}")
-        print(f"next_pwm      = {next_pwm}")
+        # print(f"next_attitude = {next_attitude}")
+        # print(f"next_pwm      = {next_pwm}")
 
         return dict(new_attitude=Float32MultiArray(data=next_attitude),
                     new_thrust=Float32MultiArray(data=np.array([next_pwm])))
