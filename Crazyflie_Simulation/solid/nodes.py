@@ -235,7 +235,7 @@ class MakePicture(eagerx.Node):
         msg = Image(data=data, height=self.height, width=self.width, encoding="bgr8", step=3 * self.width)
 
         # Debug
-        print(f'The time from the environment node = {t_n}')
+        # print(f'The time from the environment node = {t_n}')
 
         return dict(image=msg, time=Float32(data=t_n))
 
