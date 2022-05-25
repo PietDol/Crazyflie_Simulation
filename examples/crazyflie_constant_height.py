@@ -41,7 +41,7 @@ if __name__ == "__main__":
     validate_pid = eagerx.Node.make("ValidatePID", "validate_pid", rate=48)
 
     # - - - - - - - CHOOSE ENGINE MODE HERE - - - - - - -
-    engine_mode = "Ode"  # choose between Pybullet and Ode (bridge select)
+    engine_mode = "Pybullet"  # choose between Pybullet and Ode (bridge select)
 
     if engine_mode == "Pybullet":
         # - - - - - - - PYBULLET START - - - - - - -
@@ -152,7 +152,7 @@ if __name__ == "__main__":
         if engine_mode == "Pybullet":
             # Reset states for Pybullet engine
             states["crazyflie/orientation"] = np.array([0, 0, 0, 1])
-            states["crazyflie/pos"] = np.array([0, 0, 1])
+            states["crazyflie/pos"] = np.array([0, 0, 2])
         elif engine_mode == "Ode":
             # States are: [x, y, z, x_dot, y_dot, z_dot, phi, theta, thrust_state]
             states["crazyflie/model_state"] = np.array([0, 0, 1, 0, 0, 0, 0, 0, 0])
