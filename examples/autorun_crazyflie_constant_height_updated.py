@@ -28,7 +28,7 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
         real_reset = False
         rate = 220  # 220?
         safe_rate = 220
-        max_steps = 1000
+        max_steps = 8000
 
         # Initialize empty graph
         graph = Graph.create()
@@ -90,6 +90,7 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
             renderColor=renderColor, #choose between black, red, blue
             axisToPlot=axisToPlot, #choose between x, y
             max_steps=max_steps,
+            engine_mode=engine_mode,
         )
         # Create agnostic graph
         graph.add([make_picture, crazyflie, validate_pid])
@@ -175,13 +176,12 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
         # desired_altitude = 2
         # desired_thrust_pid = PID(kp=0.2, ki=0.0001, kd=0.4, rate=rate)  # kp 10000 ki 50 kd 2500000
         while not done:
-
             action = env.action_space.sample()
             # action["desired_attitude"][0] = 0  # Roll
             # action["desired_attitude"][1] = 0  # Pitch
             # action["desired_attitude"][2] = 0  # Yaw
             # action["desired_height"] = np.array([desired_altitude])
-            action["desired_position"] = np.array([1, 0, 3])
+            action["desired_position"] = np.array([0, 0, 6])
             obs, reward, done, info = env.step(action)
             rgb = env.render("rgb_array")
 
@@ -192,7 +192,7 @@ runEagerX("Pybullet",  # first run
           saveToPreviousRender=False,
           renderColor="black",
           axisToPlot=axisToPlot)
-
+# #
 # runEagerX("Ode",  # second run
 #           save_render_image=True,
 #           saveToPreviousRender=True,
