@@ -29,7 +29,7 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
         real_reset = False
         rate = 220  # 220?
         safe_rate = 220
-        max_steps = 1000
+        max_steps = 200
 
         # Initialize empty graph
         graph = Graph.create()
@@ -201,6 +201,12 @@ runEagerX("Pybullet",  # first run
           renderColor="black",
           axisToPlot=axisToPlot,
           run_id=1)
+runEagerX("Pybullet",  # first run
+          save_render_image=True,
+          saveToPreviousRender=False,
+          renderColor="black",
+          axisToPlot=axisToPlot,
+          run_id=3)
 # #
 
 runEagerX("Ode",  # second run
