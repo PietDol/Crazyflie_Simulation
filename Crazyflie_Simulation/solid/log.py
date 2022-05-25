@@ -13,7 +13,7 @@ class Log:
         self.i = 0
         self.runs = []
 
-    def add_data(self, position, orientation, run_id: int, rate: int):
+    def add_data(self, position, orientation, run_id: int, rate: int, timestamp=None):
         # position x, y, z
         # orientation roll, pitch, yaw
         # run -> should be a unique integer
@@ -26,17 +26,20 @@ class Log:
             print(self.runs)
 
         # Calculate timestamp
-        time = np.round(self.i / self.rate, 3)
+        if timestamp is None:
+            time = np.round(self.i / self.rate, 3)
+        else:
+            time = timestamp
 
         try:
             empty_cols = 7 * (len(self.runs) - 1) - len(self.data[self.i])
             self.data[self.i] += [np.nan] * empty_cols + [time, position[0], position[1], position[2],
-                                                       orientation[0], orientation[1],
-                                                       orientation[2]]
+                                                          orientation[0], orientation[1],
+                                                          orientation[2]]
         except:
             self.data.append(
                 [np.nan] * (7 * (len(self.runs) - 1)) + [time, position[0], position[1], position[2], orientation[0],
-                                                      orientation[1], orientation[2]])
+                                                         orientation[1], orientation[2]])
         self.i += 1
 
     def save_to_csv(self):

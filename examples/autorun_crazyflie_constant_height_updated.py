@@ -20,6 +20,7 @@ NAME = "varyGoal_term_noExcl"
 LOG_DIR = os.path.dirname(
     Crazyflie_Simulation.__file__) + f"/../logs/{NAME}_{datetime.today().strftime('%Y-%m-%d-%H%M')}"
 
+
 # todo: check the windows and rates
 def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor, axisToPlot, run_id):
     if __name__ == "__main__":
@@ -88,8 +89,8 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
             "MakePicture", "make_picture", rate,
             save_render_image=save_render_image,
             saveToPreviousRender=saveToPreviousRender,
-            renderColor=renderColor, #choose between black, red, blue
-            axisToPlot=axisToPlot, #choose between x, y
+            renderColor=renderColor,  # choose between black, red, blue
+            axisToPlot=axisToPlot,  # choose between x, y
             max_steps=max_steps,
             engine_mode=engine_mode,
         )
@@ -118,6 +119,9 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
         graph.connect(source=crazyflie.sensors.orientation, target=make_picture.inputs.orientation)
         graph.connect(source=crazyflie.sensors.pos, target=make_picture.inputs.position)
         graph.render(source=make_picture.outputs.image, rate=rate)
+
+        # Output time
+        graph.connect(source=make_picture.outputs.time, observation="time")
 
         # Create reset node
         if real_reset:
@@ -149,7 +153,6 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
             # done = False
             return obs, rwd, done, info
 
-
         # Define reset function
         def reset_fn(env):
             states = env.state_space.sample()
@@ -167,7 +170,8 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
             return states
 
         # Initialize Environment
-        env = EagerxEnv(name="rx", rate=rate, graph=graph, engine=engine, step_fn=step_fn, reset_fn=reset_fn, exclude=[])
+        env = EagerxEnv(name="rx", rate=rate, graph=graph, engine=engine, step_fn=step_fn, reset_fn=reset_fn,
+                        exclude=[])
 
         # First train in simulation
         # env.render("human")
@@ -187,13 +191,17 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
             obs, reward, done, info = env.step(action)
             rgb = env.render("rgb_array")
 
-            log.add_data(position=obs["position"][0], orientation=obs["orientation"][0], run_id=run_id, rate=rate)
+            # Debug
+            # print(f'The time from the environment obs  = {obs["time"][0]}')
+            # print("=" * 80)
 
+            log.add_data(position=obs["position"][0], orientation=obs["orientation"][0], run_id=run_id, rate=rate,
+                         timestamp=obs["time"][0])
 
 
 log = Log(unique_file=False)
 
-#RUN
+# RUN
 axisToPlot = "x"
 runEagerX("Pybullet",  # first run
           save_render_image=True,
