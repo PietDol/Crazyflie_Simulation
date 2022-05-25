@@ -36,7 +36,7 @@ class MakePicture(eagerx.Node):
         spec.config.rate = rate
         spec.config.process = eagerx.process.ENVIRONMENT
         spec.config.inputs = ["position", "orientation"]
-        spec.config.outputs = ["image"]
+        spec.config.outputs = ["image", "time"]
 
         spec.config.save_render_image = save_render_image if save_render_image else False
         spec.config.saveToPreviousRender = saveToPreviousRender if saveToPreviousRender else False
@@ -52,18 +52,22 @@ class MakePicture(eagerx.Node):
         spec.inputs.orientation.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
                                                                              [0, 0, 0],
                                                                              [3, 3, 3], dtype="float32")
+        spec.outputs.time.space_converter = eagerx.SpaceConverter.make("Space_Float32",
+                                                                       0,
+                                                                       9999, dtype="float32")
+
     def initialize(self, save_render_image, saveToPreviousRender, renderColor, axisToPlot, max_steps, engine_mode):
         # Change render settings here
-        self.height = 880                       # set render height [px]
-        self.width = 880                        # set render width [px]
-        self.offset = 40                        # offset of the picture from the sides [px]
-        self.timestep = 0.1                     # set timestep for render [s]
+        self.height = 880  # set render height [px]
+        self.width = 880  # set render width [px]
+        self.offset = 40  # offset of the picture from the sides [px]
+        self.timestep = 0.1  # set timestep for render [s]
         self.length = 10
         self.text_height = 4
         self.font = cv2.FONT_HERSHEY_PLAIN
-        self.xrange = [-2.5, 2.5]                   # range of x (x in 2D image = to right) [m]
-        self.yrange = [0, 4]                    # range of y (y in 2D image = up) [m]
-        self.amountOfDivisions = 11              # amount of divisions on axis, def=9
+        self.xrange = [-2.5, 2.5]  # range of x (x in 2D image = to right) [m]
+        self.yrange = [0, 4]  # range of y (y in 2D image = up) [m]
+        self.amountOfDivisions = 11  # amount of divisions on axis, def=9
 
         # set drone arm lengths
         self.arm_length = 0.028 * 4
@@ -72,15 +76,17 @@ class MakePicture(eagerx.Node):
         self.engine_mode = engine_mode
 
         # Settings which are set when creating the MakePicture Node
-        self.save_render_image = save_render_image # enable or disable render from 2D plot
-        self.saveToPreviousRender = saveToPreviousRender # saves render on top of last render
-        self.renderColor = renderColor # blue, red or black for now
-        self.axis_to_plot = axisToPlot # 'x' or 'y' right now
+        self.save_render_image = save_render_image  # enable or disable render from 2D plot
+        self.saveToPreviousRender = saveToPreviousRender  # saves render on top of last render
+        self.renderColor = renderColor  # blue, red or black for now
+        self.axis_to_plot = axisToPlot  # 'x' or 'y' right now
 
         if self.engine_mode == "Ode":
-            self.sample_length = (0.7*max_steps)/(self.rate) - self.timestep #ensure it is rendered at least once, #HARDCODE
+            self.sample_length = (0.7 * max_steps) / (
+                self.rate) - self.timestep  # ensure it is rendered at least once, #HARDCODE
         elif self.engine_mode == "Pybullet":
-            self.sample_length = (0.95*max_steps)/(self.rate) - self.timestep #ensure it is rendered at least once, #HARDCODE
+            self.sample_length = (0.95 * max_steps) / (
+                self.rate) - self.timestep  # ensure it is rendered at least once, #HARDCODE
         # (0.95*max_steps)/(self.rate) - self.timestep #ensure it is rendered at least once, def=2
 
         # AUTO INITIALIZATIONS
@@ -106,23 +112,26 @@ class MakePicture(eagerx.Node):
         # init axis for render
         self.y_axis = np.linspace(self.yrange[0], self.yrange[1], self.amountOfDivisions)
         for idx, y in enumerate(self.y_axis):
-            self.y_axis[idx] = '%.2f'%(y)
+            self.y_axis[idx] = '%.2f' % (y)
         self.x_axis = np.linspace(self.xrange[1], self.xrange[0], self.amountOfDivisions)
         for idx, x in enumerate(self.x_axis):
-            self.x_axis[idx] = '%.2f'%(x)
+            self.x_axis[idx] = '%.2f' % (x)
 
         # calculate scaling and offsets
-        self.scaling_x = (self.width-2*self.offset)/(max(self.x_axis)-min(self.x_axis)) # set scaling per division
-        self.scaling_y = (self.height-2*self.offset)/(max(self.y_axis)-min(self.y_axis))
-        self.offset_left = abs(min(self.x_axis)/(max(self.x_axis)-min(self.x_axis))*(self.width-2*self.offset)) # set offset
-        self.offset_top= abs(max(self.y_axis)/(max(self.y_axis)-min(self.y_axis))*(self.height-2*self.offset))
+        self.scaling_x = (self.width - 2 * self.offset) / (
+                max(self.x_axis) - min(self.x_axis))  # set scaling per division
+        self.scaling_y = (self.height - 2 * self.offset) / (max(self.y_axis) - min(self.y_axis))
+        self.offset_left = abs(
+            min(self.x_axis) / (max(self.x_axis) - min(self.x_axis)) * (self.width - 2 * self.offset))  # set offset
+        self.offset_top = abs(
+            max(self.y_axis) / (max(self.y_axis) - min(self.y_axis)) * (self.height - 2 * self.offset))
 
     @eagerx.register.states()
     def reset(self):
         pass
 
     @eagerx.register.inputs(position=Float32MultiArray, orientation=Float32MultiArray)
-    @eagerx.register.outputs(image=Image)
+    @eagerx.register.outputs(image=Image, time=Float32)
     def callback(self, t_n: float, position: Msg, orientation: Msg):
         pos_x, pos_y, pos_z = position.msgs[-1].data[0], position.msgs[-1].data[1], position.msgs[-1].data[2]
 
@@ -132,10 +141,9 @@ class MakePicture(eagerx.Node):
             euler_orientation = np.array(orientation.msgs[-1].data) * np.pi / 180
         roll, pitch, yaw = euler_orientation[0], -euler_orientation[1], euler_orientation[2]
 
-        #HARDCODED CORRECTION FOR Ode
+        # HARDCODED CORRECTION FOR Ode
         if self.engine_mode == "Ode":
-            roll, pitch, yaw = roll*-180/np.pi, pitch*-180/np.pi, yaw*-180/np.pi
-
+            roll, pitch, yaw = roll * -180 / np.pi, pitch * -180 / np.pi, yaw * -180 / np.pi
 
         img = np.zeros((self.height, self.width, 3), np.uint8)
         img[:, :] = (255, 255, 255)
@@ -143,13 +151,13 @@ class MakePicture(eagerx.Node):
         for i in range(self.amountOfDivisions):  # add coordinate system to the rendered picture y axis
             y_axis = self.y_axis
             x = self.offset
-            y = int(self.height - i * ((self.height-2*self.offset)/(self.amountOfDivisions-1)) - self.offset)
+            y = int(self.height - i * ((self.height - 2 * self.offset) / (self.amountOfDivisions - 1)) - self.offset)
             img = cv2.line(img, (x, y), (x - self.length, y), (0, 0, 0), 1)  # make markers on y-axis
             img = cv2.putText(img, str(y_axis[i]), (5, y + self.text_height), self.font, 1, (0, 0, 0))
 
         for i in range(self.amountOfDivisions):  # add coordinate system to the rendered picture x axis
             x_axis = self.x_axis
-            x = int(self.width - i * ((self.width-2*self.offset)/(self.amountOfDivisions-1)) - self.offset)
+            x = int(self.width - i * ((self.width - 2 * self.offset) / (self.amountOfDivisions - 1)) - self.offset)
             y = self.height - self.offset
             img = cv2.line(img, (x, self.height - self.offset), (x, self.height - self.offset + self.length), (0, 0, 0),
                            1)  # make markers on x-axis
@@ -168,12 +176,12 @@ class MakePicture(eagerx.Node):
             z_correction = self.arm_length * np.sin(-pitch)
             x_correction = self.arm_length * np.cos(-pitch)
             # print(f'pitch is: {-pitch*180/np.pi} degrees')
-            x1 = self.scaling_x*(pos_x+x_correction)+self.offset_left+self.offset # for left dot
-            x2 = self.scaling_x*(pos_x-x_correction)+self.offset_left+self.offset # for right dot
-            y1 = self.offset_top-self.scaling_y*(pos_z+z_correction)+self.offset
-            y2 = self.offset_top-self.scaling_y*(pos_z-z_correction)+self.offset
+            x1 = self.scaling_x * (pos_x + x_correction) + self.offset_left + self.offset  # for left dot
+            x2 = self.scaling_x * (pos_x - x_correction) + self.offset_left + self.offset  # for right dot
+            y1 = self.offset_top - self.scaling_y * (pos_z + z_correction) + self.offset
+            y2 = self.offset_top - self.scaling_y * (pos_z - z_correction) + self.offset
             img = cv2.circle(img, (int(x1),
-                             int(y1)), 5, self.renderColor, -1)
+                                   int(y1)), 5, self.renderColor, -1)
             img = cv2.circle(img, (int(x2),
                                    int(y2)), 5, self.renderColor, -1)
             img = cv2.line(img, (int(x1),
@@ -186,10 +194,10 @@ class MakePicture(eagerx.Node):
             """"Changes the plot so that you can see from the y axis side"""
             z_correction = self.arm_length * np.sin(roll)
             y_correction = self.arm_length * np.cos(roll)
-            x1 = self.scaling_x*(pos_y+y_correction)+self.offset_left+self.offset # for left dot
-            x2 = self.scaling_x*(pos_y-y_correction)+self.offset_left+self.offset # for right dot
-            y1 = self.offset_top-self.scaling_y*(pos_z+z_correction)+self.offset
-            y2 = self.offset_top-self.scaling_y*(pos_z-z_correction)+self.offset
+            x1 = self.scaling_x * (pos_y + y_correction) + self.offset_left + self.offset  # for left dot
+            x2 = self.scaling_x * (pos_y - y_correction) + self.offset_left + self.offset  # for right dot
+            y1 = self.offset_top - self.scaling_y * (pos_z + z_correction) + self.offset
+            y2 = self.offset_top - self.scaling_y * (pos_z - z_correction) + self.offset
             img = cv2.circle(img, (int(x1),
                                    int(y1)), 5, self.renderColor, -1)
             img = cv2.circle(img, (int(x2),
@@ -197,10 +205,10 @@ class MakePicture(eagerx.Node):
             img = cv2.line(img, (int(x1),
                                  int(y1)),
                            (int(x2),
-                           int(y2)), self.renderColor, 2)
+                            int(y2)), self.renderColor, 2)
             return img
 
-        #checks which axis is selected to plot
+        # checks which axis is selected to plot
         if self.axis_to_plot == 'x':
             img = plot_x(img)
         elif self.axis_to_plot == 'y':
@@ -225,7 +233,11 @@ class MakePicture(eagerx.Node):
 
         data = img.tobytes("C")
         msg = Image(data=data, height=self.height, width=self.width, encoding="bgr8", step=3 * self.width)
-        return dict(image=msg)
+
+        # Debug
+        print(f'The time from the environment node = {t_n}')
+
+        return dict(image=msg, time=Float32(data=t_n))
 
 
 class HeightPID(eagerx.Node):
@@ -405,10 +417,10 @@ class ValidatePID(eagerx.Node):
 
     def line_trajectory(self, length=6, center=[0, 0, 1], speed=5):
         time = 2 * length / speed
-        steps = int(time*self.rate)
+        steps = int(time * self.rate)
         center = np.array(center)
-        point_l = np.array([-length/2, 0, 0]) + center
-        point_r = np.array([length/2, 0, 0]) + center
+        point_l = np.array([-length / 2, 0, 0]) + center
+        point_r = np.array([length / 2, 0, 0]) + center
         points = [point_l, point_r]
 
         i = self.i % steps
@@ -419,7 +431,6 @@ class ValidatePID(eagerx.Node):
 
         self.i += 1
         return setpoint
-
 
     def circular_trajectory(self, radius=1, origin=[0, 0, 2], speed=1):
         circle_length = radius * 2 * np.pi

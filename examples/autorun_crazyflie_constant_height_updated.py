@@ -119,6 +119,9 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
         graph.connect(source=crazyflie.sensors.pos, target=make_picture.inputs.position)
         graph.render(source=make_picture.outputs.image, rate=rate)
 
+        # Output time
+        graph.connect(source=make_picture.outputs.time, observation="time")
+
         # Create reset node
         if real_reset:
             # Connect target state we are resetting
@@ -186,6 +189,10 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
             action["desired_position"] = np.array([0, 0, 6])
             obs, reward, done, info = env.step(action)
             rgb = env.render("rgb_array")
+
+            # Debug
+            print(f'The time from the environment obs  = {obs["time"][0]}')
+            print("=" * 80)
 
             log.add_data(position=obs["position"][0], orientation=obs["orientation"][0], run_id=run_id, rate=rate)
 
