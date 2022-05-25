@@ -26,6 +26,7 @@ class MakePicture(eagerx.Node):
             renderColor: str,
             axisToPlot: str,
             max_steps: int,
+            engine_mode: str,
     ):
         # Performs all the steps to fill-in the params with registered info about all functions.
         spec.initialize(MakePicture)
@@ -42,6 +43,7 @@ class MakePicture(eagerx.Node):
         spec.config.renderColor = renderColor if renderColor else "black"
         spec.config.axisToPlot = axisToPlot if axisToPlot else "x"
         spec.config.max_steps = max_steps if max_steps else 500
+        spec.config.engine_mode = engine_mode if engine_mode else "Pybullet"
 
         # Add space converters
         spec.inputs.position.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
@@ -50,7 +52,7 @@ class MakePicture(eagerx.Node):
         spec.inputs.orientation.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
                                                                              [0, 0, 0],
                                                                              [3, 3, 3], dtype="float32")
-    def initialize(self, save_render_image, saveToPreviousRender, renderColor, axisToPlot, max_steps):
+    def initialize(self, save_render_image, saveToPreviousRender, renderColor, axisToPlot, max_steps, engine_mode):
         # Change render settings here
         self.height = 880                       # set render height [px]
         self.width = 880                        # set render width [px]
@@ -60,7 +62,7 @@ class MakePicture(eagerx.Node):
         self.text_height = 4
         self.font = cv2.FONT_HERSHEY_PLAIN
         self.xrange = [-2, 2]                   # range of x (x in 2D image = to right) [m]
-        self.yrange = [0, 4]                    # range of y (y in 2D image = up) [m]
+        self.yrange = [0, 6]                    # range of y (y in 2D image = up) [m]
         self.amountOfDivisions = 9              # amount of divisions on axis, def=9
 
         # set drone arm lengths
@@ -71,9 +73,13 @@ class MakePicture(eagerx.Node):
         self.saveToPreviousRender = saveToPreviousRender # saves render on top of last render
         self.renderColor = renderColor # blue, red or black for now
         self.axis_to_plot = axisToPlot # 'x' or 'y' right now
-        self.sample_length = (0.95*max_steps)/(self.rate) - self.timestep #ensure it is rendered at least once, def=2
+        self.sample_length = (0.7*max_steps)/(self.rate) - self.timestep #ensure it is rendered at least once, #HARDCODE
+        # (0.95*max_steps)/(self.rate) - self.timestep #ensure it is rendered at least once, def=2
 
         # AUTO INITIALIZATIONS
+        self.engine_mode = engine_mode
+        print(self.engine_mode)
+
         # init initial image
         self.modulus_prev = 1000
         if self.saveToPreviousRender == True:
@@ -105,22 +111,24 @@ class MakePicture(eagerx.Node):
         self.offset_left = abs(min(self.x_axis)/(max(self.x_axis)-min(self.x_axis))*(self.width-2*self.offset)) # set offset
         self.offset_top= abs(max(self.y_axis)/(max(self.y_axis)-min(self.y_axis))*(self.height-2*self.offset))
 
-
     @eagerx.register.states()
     def reset(self):
         pass
 
     @eagerx.register.inputs(position=Float32MultiArray, orientation=Float32MultiArray)
     @eagerx.register.outputs(image=Image)
-
     def callback(self, t_n: float, position: Msg, orientation: Msg):
         pos_x, pos_y, pos_z = position.msgs[-1].data[0], position.msgs[-1].data[1], position.msgs[-1].data[2]
 
         if len(orientation.msgs[-1].data) == 4:
             euler_orientation = pybullet.getEulerFromQuaternion(orientation.msgs[-1].data)
         else:
-            euler_orientation = orientation.msgs[-1].data
-        roll, pitch, yaw = euler_orientation[0], euler_orientation[1], euler_orientation[2]
+            euler_orientation = np.array(orientation.msgs[-1].data) * np.pi / 180
+        roll, pitch, yaw = euler_orientation[0], -euler_orientation[1], euler_orientation[2]
+
+        #HARDCODED CORRECTION FOR Ode
+        if self.engine_mode == "Ode":
+            roll, pitch, yaw = roll*-180/np.pi, pitch*-180/np.pi, yaw*-180/np.pi
 
         img = np.zeros((self.height, self.width, 3), np.uint8)
         img[:, :] = (255, 255, 255)
@@ -136,11 +144,13 @@ class MakePicture(eagerx.Node):
             x_axis = self.x_axis
             x = int(self.width - i * ((self.width-2*self.offset)/(self.amountOfDivisions-1)) - self.offset)
             y = self.height - self.offset
-            img = cv2.line(img, (x, self.height - self.offset), (x, self.height - self.offset + self.length), (0, 0, 0), 1)  # make markers on x-axis
+            img = cv2.line(img, (x, self.height - self.offset), (x, self.height - self.offset + self.length), (0, 0, 0),
+                           1)  # make markers on x-axis
             img = cv2.putText(img, str(x_axis[i]), (x - self.text_height * 4, y + 25), self.font, 1, (0, 0, 0))
 
         #  create border
-        img = cv2.rectangle(img, (self.offset, self.offset), (self.height - self.offset, self.width - self.offset), (0, 0, 0), 1)
+        img = cv2.rectangle(img, (self.offset, self.offset), (self.height - self.offset, self.width - self.offset),
+                            (0, 0, 0), 1)
 
         # give the sampled image an axis like for the render image
         if type(self.final_image) is int:
@@ -198,6 +208,10 @@ class MakePicture(eagerx.Node):
                     elif self.axis_to_plot == 'y':
                         self.final_image = plot_y(self.final_image)
                 else:
+                    if self.axis_to_plot == 'x':
+                        self.final_image = plot_x(self.final_image)
+                    elif self.axis_to_plot == 'y':
+                        self.final_image = plot_y(self.final_image)
                     cv2.imwrite(f'../Crazyflie_Simulation/solid/Rendering/Images/final_image.png', self.final_image)
 
         self.modulus_prev = t_n % self.timestep
@@ -205,6 +219,255 @@ class MakePicture(eagerx.Node):
         data = img.tobytes("C")
         msg = Image(data=data, height=self.height, width=self.width, encoding="bgr8", step=3 * self.width)
         return dict(image=msg)
+
+
+class HeightPID(eagerx.Node):
+    @staticmethod
+    @eagerx.register.spec("HeightPID", eagerx.Node)
+    def spec(
+            spec,
+            name: str,
+            rate: float,
+    ):
+        # Modify default node params
+        spec.config.name = name
+        spec.config.rate = rate
+        spec.config.process = eagerx.process.ENVIRONMENT
+        spec.config.inputs = ["current_height", "desired_height"]
+        spec.config.outputs = ["new_action"]
+
+        # Add space converters
+        spec.inputs.current_height.space_converter = eagerx.SpaceConverter.make(
+            "Space_Float32MultiArray",
+            dtype="float32",
+            low=[-1000, -1000, 0],
+            high=[1000, 1000, 1000],
+        )
+
+        spec.inputs.desired_height.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
+                                                                                [0],
+                                                                                [65535], dtype="float32")
+
+        spec.outputs.new_action.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
+                                                                             [0],
+                                                                             [65535], dtype="float32")
+
+    def initialize(self):
+        # Define values for kp, ki, kd
+        self.kp = 0.2
+        self.ki = 0.0001
+        self.kd = 0.4
+        self.pid = PID(kp=self.kp, ki=self.ki, kd=self.kd, rate=self.rate)
+        self.gravity = 0.027 * 9.81
+
+    @eagerx.register.states()
+    def reset(self):
+        self.pid.reset()
+
+    # Force to PWM
+    @staticmethod
+    def force_to_pwm(force):
+        # Just the inversion of pwm_to_force
+        a = 4 * 2.130295e-11
+        b = 4 * 1.032633e-6
+        c = 5.485e-4 - force
+        d = b ** 2 - 4 * a * c
+        pwm = (-b + np.sqrt(d)) / (2 * a)
+        return pwm
+
+    @eagerx.register.inputs(current_height=Float32MultiArray, desired_height=Float32MultiArray)
+    @eagerx.register.outputs(new_action=Float32MultiArray)
+    def callback(self, t_n: float, current_height: Msg, desired_height: Msg):
+        next_force = self.gravity + self.pid.next_action(current=current_height.msgs[-1].data[2],
+                                                         desired=desired_height.msgs[-1].data[0])
+        next_pwm = np.clip(self.force_to_pwm(next_force), 10000, 60000)
+        return dict(new_action=Float32MultiArray(data=np.array([next_pwm])))
+
+
+class ValidatePID(eagerx.Node):
+    @staticmethod
+    @eagerx.register.spec("ValidatePID", eagerx.Node)
+    def spec(
+            spec,
+            name: str,
+            rate: float,
+    ):
+        # Modify default node params
+        spec.config.name = name
+        spec.config.rate = rate
+        spec.config.process = eagerx.process.ENVIRONMENT
+        spec.config.inputs = ["current_position", "desired_position"]
+        spec.config.outputs = ["new_attitude", "new_thrust"]
+
+        # Add space converters
+        spec.inputs.current_position.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
+                                                                                  dtype="float32",
+                                                                                  low=[-1000, -1000, 0],
+                                                                                  high=[1000, 1000, 1000],
+                                                                                  )
+
+        spec.inputs.desired_position.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
+                                                                                  dtype="float32",
+                                                                                  low=[-1000, -1000, 0],
+                                                                                  high=[1000, 1000, 1000],
+                                                                                  )
+        # for degrees output
+        spec.outputs.new_attitude.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
+                                                                               [-30, -30, -30],
+                                                                               [30, 30, 30], dtype="float32")
+        # for quaternion output
+        # spec.outputs.new_attitude.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
+        #                                                                        [-1, -1, -1, -1],
+        #                                                                        [1, 1, 1, 1], dtype="float32")
+        spec.outputs.new_thrust.space_converter = eagerx.SpaceConverter.make("Space_Float32MultiArray",
+                                                                             [0],
+                                                                             [65535], dtype="float32")
+
+    def initialize(self):
+        # Define values for kp, ki, kd
+        self.kp_x = 0.05  # 0.05
+        self.ki_x = 0.0001
+        self.kd_x = 0.06  # 0.06
+        self.kp_z = 0.2
+        self.ki_z = 0.0001
+        self.kd_z = 0.4
+        self.pid_x = PID(kp=self.kp_x, ki=self.ki_x, kd=self.kd_x, rate=self.rate)
+        self.pid_z = PID(kp=self.kp_z, ki=self.ki_z, kd=self.kd_z, rate=self.rate)
+        self.gravity = 0.027 * 9.81
+
+        self.i = 0
+
+    @eagerx.register.states()
+    def reset(self):
+        self.pid_x.reset()
+        self.pid_z.reset()
+
+    # Force to PWM
+    @staticmethod
+    def force_to_pwm(force):
+        # Just the inversion of pwm_to_force
+        a = 4 * 2.130295e-11
+        b = 4 * 1.032633e-6
+        c = 5.485e-4 - force
+        d = b ** 2 - 4 * a * c
+        pwm = (-b + np.sqrt(d)) / (2 * a)
+        return pwm
+
+    @eagerx.register.inputs(current_position=Float32MultiArray, desired_position=Float32MultiArray)
+    @eagerx.register.outputs(new_attitude=Float32MultiArray, new_thrust=Float32MultiArray)
+    def callback(self, t_n: float, current_position: Msg, desired_position: Msg):
+        current_pos = current_position.msgs[-1].data
+        # setpoint = desired_position.msgs[-1].data
+        # Choose your validate function
+        setpoint = self.eight_trajectory()
+        # print(setpoint)
+        next_force_z = self.gravity + self.pid_z.next_action(current=current_pos[2],
+                                                             desired=setpoint[2])
+        next_force_x = self.pid_x.next_action(current=current_pos[0],
+                                              desired=setpoint[0])
+        next_pitch = np.clip(-np.arctan(next_force_x / next_force_z) * 180 / np.pi, -30, 30)
+        next_thrust = np.cos(next_pitch * np.pi / 180) * next_force_z
+        next_pwm = np.clip(self.force_to_pwm(next_thrust), 10000, 60000)
+
+        if next_force_z <= 0:
+            next_pwm = 14000
+
+        # for quaternion
+        # next_pitch = np.clip(-np.arctan(next_force_x / next_force_z), -np.pi/6, np.pi/6)
+        # next_attitude = np.array(pybullet.getQuaternionFromEuler([0, next_pitch, 0]))
+
+        # next_pitch = (current_position.msgs[-1].data[0] - 1) * 10
+        # next_pitch = np.clip(next_pitch, -30, 30)
+
+        # for degrees
+        # next_pitch = 30
+        next_attitude = np.array([0, -next_pitch, 0])
+        # next_attitude = np.array([0, 30, 0])
+        # print(f"next_attitude = {next_attitude}")
+        # print(f"next_pwm      = {next_pwm}")
+
+        return dict(new_attitude=Float32MultiArray(data=next_attitude),
+                    new_thrust=Float32MultiArray(data=np.array([next_pwm])))
+
+    def line_trajectory(self, length=6, center=[0, 0, 1], speed=5):
+        time = 2 * length / speed
+        steps = int(time*self.rate)
+        center = np.array(center)
+        point_l = np.array([-length/2, 0, 0]) + center
+        point_r = np.array([length/2, 0, 0]) + center
+        points = [point_l, point_r]
+
+        i = self.i % steps
+        if self.i / steps % 2 <= 1:
+            setpoint = points[0]
+        else:
+            setpoint = points[1]
+
+        self.i += 1
+        return setpoint
+
+
+    def circular_trajectory(self, radius=1, origin=[0, 0, 2], speed=1.5):
+        circle_length = radius * 2 * np.pi
+        time = circle_length / speed
+        steps = int(time * self.rate)
+        theta = np.linspace(-np.pi / 2, 3 / 2 * np.pi, steps)
+
+        i = self.i % steps
+        x = np.cos(theta[i]) * radius
+        y = 0
+        z = np.sin(theta[i]) * radius
+        setpoint = np.array([x + origin[0], y, z + origin[2]])
+
+        self.i += 1
+
+        return setpoint
+
+    def triangular_trajectory(self, line_length=2, startpoint=[0, 0, 1], speed=1):
+        time = line_length * 6 / speed
+        steps = int(time * self.rate)
+        startpoint = np.array(startpoint)
+        point1 = startpoint
+        point2 = point1 + np.array([line_length, 0, 0])
+        point3 = point2 + np.array([-np.cos(np.pi / 3) * line_length, 0, np.sin(np.pi / 3) * line_length])
+        points = np.array([point2, point3, point1])
+
+        i = self.i % steps
+        if i < steps / 3:
+            setpoint = points[0]
+        elif i < 2 * steps / 3:
+            setpoint = points[1]
+        else:
+            setpoint = points[2]
+
+        self.i += 1
+
+        return setpoint
+
+    def eight_trajectory(self, radius=1, origin=[0, 0, 2], speed=2):
+        origin = np.array(origin)
+        origin_r = np.array([radius, 0, 0]) + origin
+        origin_l = np.array([-radius, 0, 0]) + origin
+        circle_length = radius * 2 * np.pi
+        time = circle_length / speed
+        steps = int(time * self.rate)
+        theta = np.linspace(-np.pi, np.pi, steps)
+
+        i = self.i % steps
+        if self.i / steps % 2 <= 1:
+            x = np.cos(theta[i]) * radius
+            y = 0
+            z = np.sin(theta[i]) * radius
+            setpoint = np.array([x + origin_r[0], y, z + origin_r[2]])
+        else:
+            x = np.cos(theta[i]) * radius
+            y = 0
+            z = np.sin(theta[i]) * radius
+            setpoint = np.array([- x + origin_l[0], y, z + origin_l[2]])
+
+        self.i += 1
+
+        return setpoint
 
 # class AttitudePID(eagerx.Node):
 #     @staticmethod
@@ -466,4 +729,3 @@ class MakePicture(eagerx.Node):
 #     def callback(self, t_n: float, angular_velocity: Msg, acceleration: Msg, orientation: Msg):
 #         attitude = orientation.msgs[-1].data
 #         return dict(orientation=Float32MultiArray(data=attitude))
-

@@ -8,6 +8,7 @@ import Crazyflie_Simulation  # Registers objects # noqa # pylint: disable=unused
 import eagerx_reality  # Registers Engine # noqa # pylint: disable=unused-import
 import Crazyflie_Simulation.solid.nodes
 from Crazyflie_Simulation.solid.pid import PID
+from Crazyflie_Simulation.solid.log import Log
 
 # Other
 import numpy as np
@@ -28,7 +29,7 @@ if __name__ == "__main__":
     real_reset = False
     rate = 220  # 220?
     safe_rate = 220
-    max_steps = 300
+    max_steps = 1000
 
     # Initialize empty graph
     graph = Graph.create()
@@ -36,8 +37,12 @@ if __name__ == "__main__":
     # Set URDF path
     urdf_path = os.path.dirname(Crazyflie_Simulation.__file__) + "/solid/assets/"
 
+    # Create PID node
+    pid_height = eagerx.Node.make("HeightPID", "pid_height", rate=48)
+    validate_pid = eagerx.Node.make("ValidatePID", "validate_pid", rate=48)
+
     # - - - - - - - CHOOSE ENGINE MODE HERE - - - - - - -
-    engine_mode = "Pybullet" # choose between Pybullet and Ode (bridge select)
+    # engine_mode = "Pybullet"  # choose between Pybullet and Ode (bridge select)
 
     if engine_mode == "Pybullet":
         # - - - - - - - PYBULLET START - - - - - - -
@@ -58,7 +63,8 @@ if __name__ == "__main__":
 
         # Define engine
         # engine = Engine.make("RealEngine", rate=rate, sync=True, process=process.NEW_PROCESS)
-        engine = eagerx.Engine.make("PybulletEngine", rate=safe_rate, gui=True, egl=True, sync=True, real_time_factor=0.0)
+        engine = eagerx.Engine.make("PybulletEngine", rate=safe_rate, gui=True, egl=True, sync=True,
+                                    real_time_factor=0.0)
         # - - - - - - - PYBULLET END - - - - - - -
     elif engine_mode == "Ode":
         # - - - - - - - ODE START - - - - - - -
@@ -80,20 +86,34 @@ if __name__ == "__main__":
     # Add picture making node and EDIT CONFIGURATION
     make_picture = eagerx.Node.make(
         "MakePicture", "make_picture", rate,
-        save_render_image=True,
-        saveToPreviousRender=False,
-        renderColor="black", #choose between black, red, blue
-        axisToPlot="x", #choose between x, y
+        save_render_image=save_render_image,
+        saveToPreviousRender=saveToPreviousRender,
+        renderColor=renderColor, #choose between black, red, blue
+        axisToPlot=axisToPlot, #choose between x, y
+        max_steps=max_steps,
+        engine_mode=engine_mode,
     )
     # Create agnostic graph
-    graph.add(make_picture)
-    graph.add(crazyflie)
+    graph.add([make_picture, crazyflie, validate_pid])
+    # graph.add(crazyflie)
+    # graph.add(pid_height)
+    # graph.add(validate_pid)
+
     # Connect Crazyflie inputs
-    graph.connect(action="desired_attitude", target=crazyflie.actuators.commanded_attitude)
-    graph.connect(action="desired_thrust", target=crazyflie.actuators.commanded_thrust)
+    # graph.connect(action="desired_attitude", target=crazyflie.actuators.commanded_attitude)
+    graph.connect(action="desired_position", target=validate_pid.inputs.desired_position)
+    # graph.connect(action="desired_thrust", target=crazyflie.actuators.commanded_thrust)
+    # graph.connect(action="desired_height", target=pid_height.inputs.desired_height)
+    # graph.connect(source=pid_height.outputs.new_action, target=crazyflie.actuators.commanded_thrust)
+    graph.connect(source=validate_pid.outputs.new_thrust, target=crazyflie.actuators.commanded_thrust)
+    graph.connect(source=validate_pid.outputs.new_attitude, target=crazyflie.actuators.commanded_attitude)
+
     # Connect Crazyflie outputs
     graph.connect(source=crazyflie.sensors.orientation, observation="orientation")
     graph.connect(source=crazyflie.sensors.pos, observation="position")
+    # graph.connect(source=crazyflie.sensors.pos, target=pid_height.inputs.current_height)
+    graph.connect(source=crazyflie.sensors.pos, target=validate_pid.inputs.current_position)
+
     # Connect picture making node
     graph.connect(source=crazyflie.sensors.orientation, target=make_picture.inputs.orientation)
     graph.connect(source=crazyflie.sensors.pos, target=make_picture.inputs.position)
@@ -124,12 +144,11 @@ if __name__ == "__main__":
             done = True
             info["TimeLimit.truncated"] = True
         else:
-            done = False | (np.linalg.norm(can[:2]) > 1.0)  # Can is out of reach
-            if done:
-                rwd = -50
+            done = False
         # done = done | (np.linalg.norm(goal - can) < 0.1 and can[2] < 0.05)  # Can has not fallen down & within threshold.
-        done = False
+        # done = False
         return obs, rwd, done, info
+
 
     # Define reset function
     def reset_fn(env):
@@ -153,28 +172,19 @@ if __name__ == "__main__":
     # First train in simulation
     # env.render("human")
 
+    _, done = env.reset(), False
     # Evaluate
-    for eps in range(5000):
-        print(f"Episode {eps}")
-        _, done = env.reset(), False
-        desired_altitude = 1
-        while not done:
-            desired_thrust_pid = PID(kp=10000, ki=50, kd=2500000, rate=rate)  # kp 10000 ki 50 kd 2500000
 
-            action = env.action_space.sample()
-            action["desired_attitude"][0] = 0  # Roll
-            action["desired_attitude"][1] = 0  # Pitch
-            action["desired_attitude"][2] = 0  # Yaw
-            try:
-                action["desired_thrust"][0] = desired_thrust_pid.next_action(current=obs["position"][0][2],
-                                                                             desired=desired_altitude)
-            except:
-                action["desired_thrust"][0] = desired_thrust_pid.next_action(current=0, desired=desired_altitude)
-            action["desired_thrust"][0] = np.clip(action["desired_thrust"][0], 10000, 60000)
-            # action["desired_thrust"][0] = 36100
-            obs, reward, done, info = env.step(action)
-            rgb = env.render("rgb_array")
-            # print("Orientation:")
-            # print(obs["orientation"])
-            # print("Position:")
-            # print(obs["position"])
+    # desired_altitude = 2
+    # desired_thrust_pid = PID(kp=0.2, ki=0.0001, kd=0.4, rate=rate)  # kp 10000 ki 50 kd 2500000
+    while not done:
+        action = env.action_space.sample()
+        # action["desired_attitude"][0] = 0  # Roll
+        # action["desired_attitude"][1] = 0  # Pitch
+        # action["desired_attitude"][2] = 0  # Yaw
+        # action["desired_height"] = np.array([desired_altitude])
+        action["desired_position"] = np.array([0, 0, 6])
+        obs, reward, done, info = env.step(action)
+        rgb = env.render("rgb_array")
+
+        log.add_data(position=obs["position"][0], orientation=obs["orientation"][0], run_id=run_id, rate=rate)
