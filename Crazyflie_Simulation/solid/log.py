@@ -4,20 +4,20 @@ from time import localtime, strftime
 
 
 class Log:
-    def __init__(self, unique_file: bool, rate):
+    def __init__(self, unique_file: bool):
         self.unique_file = unique_file
-        self.rate = rate
-        self.dt = 1 / rate
-        self.directory = ""
+        self.rate = 0
+        self.directory = "../Crazyflie_Simulation/solid/Logging/"
         self.filename = "log.csv" if not unique_file else ("log" + strftime("-%H-%M-%S-%d%b%Y", localtime()) + ".csv")
         self.data = []
         self.i = 0
         self.runs = []
 
-    def add_data(self, position, orientation, run_id: int):
+    def add_data(self, position, orientation, run_id: int, rate: int):
         # position x, y, z
         # orientation roll, pitch, yaw
         # run -> should be a unique integer
+        self.rate = rate
 
         # Check if the run index is new
         if run_id not in self.runs:

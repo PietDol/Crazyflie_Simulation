@@ -7,6 +7,7 @@ import eagerx_pybullet  # Registers PybulletEngine # noqa # pylint: disable=unus
 import Crazyflie_Simulation  # Registers objects # noqa # pylint: disable=unused-import
 import eagerx_reality  # Registers Engine # noqa # pylint: disable=unused-import
 import Crazyflie_Simulation.solid.nodes
+from Crazyflie_Simulation.solid.log import Log
 from Crazyflie_Simulation.solid.pid import PID
 
 # Other
@@ -20,7 +21,7 @@ LOG_DIR = os.path.dirname(
     Crazyflie_Simulation.__file__) + f"/../logs/{NAME}_{datetime.today().strftime('%Y-%m-%d-%H%M')}"
 
 # todo: check the windows and rates
-def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor, axisToPlot):
+def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor, axisToPlot, run_id):
     if __name__ == "__main__":
         eagerx.initialize("eagerx_core", anonymous=True, log_level=eagerx.log.WARN)
 
@@ -28,7 +29,7 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
         real_reset = False
         rate = 220  # 220?
         safe_rate = 220
-        max_steps = 8000
+        max_steps = 1000
 
         # Initialize empty graph
         graph = Graph.create()
@@ -170,6 +171,7 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
 
         # First train in simulation
         # env.render("human")
+
         _, done = env.reset(), False
         # Evaluate
 
@@ -185,16 +187,27 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
             obs, reward, done, info = env.step(action)
             rgb = env.render("rgb_array")
 
+            log.add_data(position=obs["position"][0], orientation=obs["orientation"][0], run_id=run_id, rate=rate)
+
+
+
+log = Log(unique_file=False)
+
 #RUN
 axisToPlot = "x"
 runEagerX("Pybullet",  # first run
           save_render_image=True,
           saveToPreviousRender=False,
           renderColor="black",
-          axisToPlot=axisToPlot)
+          axisToPlot=axisToPlot,
+          run_id=1)
 # #
-# runEagerX("Ode",  # second run
-#           save_render_image=True,
-#           saveToPreviousRender=True,
-#           renderColor="red",
-#           axisToPlot=axisToPlot)
+
+runEagerX("Ode",  # second run
+          save_render_image=True,
+          saveToPreviousRender=True,
+          renderColor="red",
+          axisToPlot=axisToPlot,
+          run_id=2)
+
+log.save_to_csv()
