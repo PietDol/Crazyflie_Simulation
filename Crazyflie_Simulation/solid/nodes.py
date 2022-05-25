@@ -346,7 +346,7 @@ class ValidatePID(eagerx.Node):
         current_pos = current_position.msgs[-1].data
         # setpoint = desired_position.msgs[-1].data
         # Choose your validate function
-        setpoint = self.eight_trajectory()
+        setpoint = self.line_trajectory()
         print(setpoint)
         next_force_z = self.gravity + self.pid_z.next_action(current=current_pos[2],
                                                              desired=setpoint[2])
@@ -376,7 +376,25 @@ class ValidatePID(eagerx.Node):
         return dict(new_attitude=Float32MultiArray(data=next_attitude),
                     new_thrust=Float32MultiArray(data=np.array([next_pwm])))
 
-    def circular_trajectory(self, radius=1, origin=[0, 0, 2], speed=1):
+    def line_trajectory(self, length=6, center=[0, 0, 1], speed=5):
+        time = 2 * length / speed
+        steps = int(time*self.rate)
+        center = np.array(center)
+        point_l = np.array([-length/2, 0, 0]) + center
+        point_r = np.array([length/2, 0, 0]) + center
+        points = [point_l, point_r]
+
+        i = self.i % steps
+        if self.i / steps % 2 <= 1:
+            setpoint = points[0]
+        else:
+            setpoint = points[1]
+
+        self.i += 1
+        return setpoint
+
+
+    def circular_trajectory(self, radius=1, origin=[0, 0, 2], speed=1.5):
         circle_length = radius * 2 * np.pi
         time = circle_length / speed
         steps = int(time * self.rate)
@@ -413,7 +431,7 @@ class ValidatePID(eagerx.Node):
 
         return setpoint
 
-    def eight_trajectory(self, radius=1, origin=[0, 0, 2], speed=0.5):
+    def eight_trajectory(self, radius=1, origin=[0, 0, 2], speed=2):
         origin = np.array(origin)
         origin_r = np.array([radius, 0, 0]) + origin
         origin_l = np.array([-radius, 0, 0]) + origin

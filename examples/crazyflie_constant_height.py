@@ -171,7 +171,7 @@ if __name__ == "__main__":
 
     # First train in simulation
     # env.render("human")
-
+    i = 0
     # Evaluate
     for eps in range(5000):
         print(f"Episode {eps}")
@@ -185,6 +185,11 @@ if __name__ == "__main__":
             # action["desired_attitude"][1] = 0  # Pitch
             # action["desired_attitude"][2] = 0  # Yaw
             # action["desired_height"] = np.array([desired_altitude])
-            action["desired_position"] = np.array([2, 0, 2])
+            action["desired_position"] = np.array([0, 0, 1])
             obs, reward, done, info = env.step(action)
             rgb = env.render("rgb_array")
+            i += 1
+
+            # if i > 150:
+            #     done = True
+            #     i = 0

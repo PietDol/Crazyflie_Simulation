@@ -50,7 +50,7 @@ class AttitudePID(EngineNode):
     def initialize(self):
         # rate / 2 -> so error * 2 and dt * 2 -> so kp / 2 and ki / 4 and kd = kd
         self.attitude_pid_yaw = PID(kp=6, ki=1, kd=0.35, rate=self.rate)
-        self.attitude_pid_pitch = PID(kp=12, ki=12, kd=0, rate=self.rate) # 6, 3, 0
+        self.attitude_pid_pitch = PID(kp=48, ki=12, kd=0, rate=self.rate) # 6, 3, 0
         self.attitude_pid_roll = PID(kp=12, ki=12, kd=0, rate=self.rate)  # 6, 3, 0
 
     @eagerx.register.states()
@@ -118,7 +118,7 @@ class AttitudeRatePID(EngineNode):
 
     def initialize(self):
         self.attitude_rate_pid_yaw = PID(kp=120, ki=16.7, kd=0, rate=self.rate)
-        self.attitude_rate_pid_pitch = PID(kp=250, ki=500, kd=2.5, rate=self.rate)
+        self.attitude_rate_pid_pitch = PID(kp=70, ki=60, kd=2.5, rate=self.rate)  # 250, 500, 2.5
         self.attitude_rate_pid_roll = PID(kp=250, ki=500, kd=2.5, rate=self.rate)
 
     @eagerx.register.states()
