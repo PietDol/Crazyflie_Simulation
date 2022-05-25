@@ -61,23 +61,29 @@ class MakePicture(eagerx.Node):
         self.length = 10
         self.text_height = 4
         self.font = cv2.FONT_HERSHEY_PLAIN
-        self.xrange = [-2, 2]                   # range of x (x in 2D image = to right) [m]
-        self.yrange = [0, 6]                    # range of y (y in 2D image = up) [m]
-        self.amountOfDivisions = 9              # amount of divisions on axis, def=9
+        self.xrange = [-2.5, 2.5]                   # range of x (x in 2D image = to right) [m]
+        self.yrange = [0, 4]                    # range of y (y in 2D image = up) [m]
+        self.amountOfDivisions = 11              # amount of divisions on axis, def=9
 
         # set drone arm lengths
         self.arm_length = 0.028 * 4
+
+        # set engine mode
+        self.engine_mode = engine_mode
 
         # Settings which are set when creating the MakePicture Node
         self.save_render_image = save_render_image # enable or disable render from 2D plot
         self.saveToPreviousRender = saveToPreviousRender # saves render on top of last render
         self.renderColor = renderColor # blue, red or black for now
         self.axis_to_plot = axisToPlot # 'x' or 'y' right now
-        self.sample_length = (0.7*max_steps)/(self.rate) - self.timestep #ensure it is rendered at least once, #HARDCODE
+
+        if self.engine_mode == "Ode":
+            self.sample_length = (0.7*max_steps)/(self.rate) - self.timestep #ensure it is rendered at least once, #HARDCODE
+        elif self.engine_mode == "Pybullet":
+            self.sample_length = (0.95*max_steps)/(self.rate) - self.timestep #ensure it is rendered at least once, #HARDCODE
         # (0.95*max_steps)/(self.rate) - self.timestep #ensure it is rendered at least once, def=2
 
         # AUTO INITIALIZATIONS
-        self.engine_mode = engine_mode
         print(self.engine_mode)
 
         # init initial image
@@ -292,10 +298,12 @@ class ValidatePID(eagerx.Node):
             spec,
             name: str,
             rate: float,
+            engine_mode: str,
     ):
         # Modify default node params
         spec.config.name = name
         spec.config.rate = rate
+        spec.config.engine_mode = engine_mode
         spec.config.process = eagerx.process.ENVIRONMENT
         spec.config.inputs = ["current_position", "desired_position"]
         spec.config.outputs = ["new_attitude", "new_thrust"]
@@ -324,7 +332,7 @@ class ValidatePID(eagerx.Node):
                                                                              [0],
                                                                              [65535], dtype="float32")
 
-    def initialize(self):
+    def initialize(self, engine_mode):
         # Define values for kp, ki, kd
         self.kp_x = 0.05  # 0.05
         self.ki_x = 0.0001
@@ -335,7 +343,7 @@ class ValidatePID(eagerx.Node):
         self.pid_x = PID(kp=self.kp_x, ki=self.ki_x, kd=self.kd_x, rate=self.rate)
         self.pid_z = PID(kp=self.kp_z, ki=self.ki_z, kd=self.kd_z, rate=self.rate)
         self.gravity = 0.027 * 9.81
-
+        self.engine_mode = engine_mode
         self.i = 0
 
     @eagerx.register.states()
@@ -382,7 +390,12 @@ class ValidatePID(eagerx.Node):
 
         # for degrees
         # next_pitch = 30
-        next_attitude = np.array([0, -next_pitch, 0])
+        if self.engine_mode == 'Ode':
+            next_attitude = np.array([0, -next_pitch, 0])
+        elif self.engine_mode == 'Pybullet':
+            next_attitude = np.array([0, next_pitch, 0])
+        else:
+            print('Wrong Enginemode selected')
         # next_attitude = np.array([0, 30, 0])
         # print(f"next_attitude = {next_attitude}")
         # print(f"next_pwm      = {next_pwm}")
@@ -408,7 +421,7 @@ class ValidatePID(eagerx.Node):
         return setpoint
 
 
-    def circular_trajectory(self, radius=1, origin=[0, 0, 2], speed=1.5):
+    def circular_trajectory(self, radius=1, origin=[0, 0, 2], speed=1):
         circle_length = radius * 2 * np.pi
         time = circle_length / speed
         steps = int(time * self.rate)
@@ -445,7 +458,7 @@ class ValidatePID(eagerx.Node):
 
         return setpoint
 
-    def eight_trajectory(self, radius=1, origin=[0, 0, 2], speed=2):
+    def eight_trajectory(self, radius=1, origin=[0, 0, 2], speed=1):
         origin = np.array(origin)
         origin_r = np.array([radius, 0, 0]) + origin
         origin_l = np.array([-radius, 0, 0]) + origin

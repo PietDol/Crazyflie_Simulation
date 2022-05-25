@@ -29,7 +29,7 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
         real_reset = False
         rate = 220  # 220?
         safe_rate = 220
-        max_steps = 1000
+        max_steps = 4000
 
         # Initialize empty graph
         graph = Graph.create()
@@ -39,7 +39,7 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
 
         # Create PID node
         pid_height = eagerx.Node.make("HeightPID", "pid_height", rate=48)
-        validate_pid = eagerx.Node.make("ValidatePID", "validate_pid", rate=48)
+        validate_pid = eagerx.Node.make("ValidatePID", "validate_pid", rate=48, engine_mode=engine_mode)
 
         # - - - - - - - CHOOSE ENGINE MODE HERE - - - - - - -
         # engine_mode = "Pybullet"  # choose between Pybullet and Ode (bridge select)
@@ -157,10 +157,10 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
             if engine_mode == "Pybullet":
                 # Reset states for Pybullet engine
                 states["crazyflie/orientation"] = np.array([0, 0, 0, 1])
-                states["crazyflie/pos"] = np.array([0, 0, 1])
+                states["crazyflie/pos"] = np.array([0, 0, 2])
             elif engine_mode == "Ode":
                 # States are: [x, y, z, x_dot, y_dot, z_dot, phi, theta, thrust_state]
-                states["crazyflie/model_state"] = np.array([0, 0, 1, 0, 0, 0, 0, 0, 0])
+                states["crazyflie/model_state"] = np.array([0, 0, 2, 0, 0, 0, 0, 0, 0])
             else:
                 raise "Wrong engine_mode selected. Please choose between Pybullet and Ode"
 
