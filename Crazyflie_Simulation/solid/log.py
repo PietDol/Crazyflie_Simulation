@@ -14,7 +14,12 @@ class Log:
         self.i = 0
         self.runs = []
 
-    def add_data(self, position, orientation, run_id: int, rate: int, timestamp=None):
+    def add_data(self, position, orientation, run_id: int, rate: int, engine_mode: str, timestamp=None):
+        # ODE Conversion hardcode
+        if engine_mode == "Ode":
+            orientation = orientation*(180/np.pi)
+            orientation[1] = -orientation[1]
+
         # position x, y, z
         # orientation roll, pitch, yaw
         # run -> should be a unique integer
@@ -115,7 +120,17 @@ class Analyse:
 
         plt.show()
 
-    def plot_position(self, axis: str, runs: list):
+    def plot_position(self, mode: str, runs: list):
+        try:
+            mode_nr = self.mode_dict[mode]
+
+            if mode_nr <= 3:
+                unit = "m"
+            else:
+                unit = "deg"
+        except KeyError:
+            raise KeyError(f"Give one of the following modes as input: {[key for key in self.mode_dict.keys()]}")
+
         # plot both runs
         plots = {}
         plots_difference = []
@@ -123,15 +138,7 @@ class Analyse:
         plt.figure("1")
         for run in runs:
             if run in self.run_numbers:
-                if axis == "x":
-                    plots[run] = self.df[f"{run}.1"]
-                elif axis == "y":
-                    plots[run] = self.df[f"{run}.2"]
-                elif axis == "z":
-                    # z = self.df[f"{run}.3"]
-                    plots[run] = self.df[f"{run}.3"]
-                else:
-                    raise KeyError(f"Give one of the following as input: x, y, z")
+                plots[run] = self.df[f"{run}.{mode_nr}"]
 
                 if len(runs) <= 2:
                     if len(plots_difference) == 0:
@@ -143,8 +150,8 @@ class Analyse:
 
             plt.plot(time, plots[run], label=f"Run {run}")
 
-        plt.title(f"{axis}-axis vs. time")
-        plt.ylabel(f"{axis}-axis [m]")
+        plt.title(f"{mode} vs. time")
+        plt.ylabel(f"{mode} [{unit}]")
         plt.xlabel("Time [s]")
         plt.legend()
 
@@ -156,11 +163,11 @@ class Analyse:
 
         plt.figure("2")
         plots_difference = np.array(plots_difference)
-        plt.plot(time, plots_difference, label=f"{axis}-axis Error")
-        plt.title(f"error {axis}-axis vs. time")
-        plt.ylabel(f"{axis}-axis [m]")
+        plt.plot(time, plots_difference, label=f"{mode} Error")
+        plt.title(f"error {mode} vs. time")
+        plt.ylabel(f"{mode} [{unit}]")
         plt.xlabel("Time [s]")
-        print(f"max error in {axis}-axis: {max(plots_difference)} [m]")
+        print(f"max error in {mode}: {max(plots_difference)} [m]")
         plt.legend()
 
         plt.show()
