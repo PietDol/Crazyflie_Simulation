@@ -29,7 +29,7 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
     real_reset = False
     rate = 220  # 220?
     safe_rate = 220
-    max_steps = 4000
+    max_steps = 3600
 
     # Initialize empty graph
     graph = Graph.create()

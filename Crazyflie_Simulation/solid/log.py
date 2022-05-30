@@ -115,5 +115,56 @@ class Analyse:
 
         plt.show()
 
+    def plot_position(self, axis: str, runs: list):
+        # plot both runs
+        plots = {}
+        plots_difference = []
+        time = self.df["1"]
+        plt.figure("1")
+        for run in runs:
+            if run in self.run_numbers:
+                if axis == "x":
+                    plots[run] = self.df[f"{run}.1"]
+                elif axis == "y":
+                    plots[run] = self.df[f"{run}.2"]
+                elif axis == "z":
+                    # z = self.df[f"{run}.3"]
+                    plots[run] = self.df[f"{run}.3"]
+                else:
+                    raise KeyError(f"Give one of the following as input: x, y, z")
+
+                if len(runs) <= 2:
+                    if len(plots_difference) == 0:
+                        plots_difference = plots[run]
+                    else:
+                        plots_difference -= plots[run]
+            else:
+                raise KeyError(f"Choose runs from the following options: {self.run_numbers}")
+
+            plt.plot(time, plots[run], label=f"Run {run}")
+
+        plt.title(f"{axis}-axis vs. time")
+        plt.ylabel(f"{axis}-axis [m]")
+        plt.xlabel("Time [s]")
+        plt.legend()
+
+
+        # difference plot
+        # for i in range(1000):
+        #     time.pop(i+1)
+        #     plots_difference.pop(i+1)
+
+        plt.figure("2")
+        plots_difference = np.array(plots_difference)
+        plt.plot(time, plots_difference, label=f"{axis}-axis Error")
+        plt.title(f"error {axis}-axis vs. time")
+        plt.ylabel(f"{axis}-axis [m]")
+        plt.xlabel("Time [s]")
+        print(f"max error in {axis}-axis: {max(plots_difference)} [m]")
+        plt.legend()
+
+        plt.show()
+
+
 # df["index"] gives columns
 # df.loc[index] gives rows

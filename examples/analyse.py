@@ -10,5 +10,8 @@ analyse.calculate_differences(id=2, run1=2, run2=1)
 
 # id = plot the error of a certain variable against time from the dataset with the same id as above
 # mode = ['x', 'y', 'z', 'roll', 'pitch', 'yaw']
-analyse.plot_graph(id=1, mode="x")
-analyse.plot_graph(id=2, mode="x")
+# analyse.plot_graph(id=1, mode="x")
+# analyse.plot_graph(id=2, mode="x")
+
+analyse.plot_position(axis="z", runs=[1,2])
+analyse.plot_position(axis="x", runs=[1,2])
