@@ -195,7 +195,7 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
         # print("=" * 80)
 
         log.add_data(position=obs["position"][0], orientation=obs["orientation"][0], run_id=run_id, rate=rate,
-                     timestamp=obs["time"][0])
+                     timestamp=obs["time"][0], engine_mode=engine_mode)
 
 
 if __name__ == "__main__":
