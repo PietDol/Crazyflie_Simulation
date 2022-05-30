@@ -50,8 +50,8 @@ class AttitudePID(EngineNode):
     def initialize(self):
         # rate / 2 -> so error * 2 and dt * 2 -> so kp / 2 and ki / 4 and kd = kd
         self.attitude_pid_yaw = PID(kp=6, ki=1, kd=0.35, rate=self.rate)
-        self.attitude_pid_pitch = PID(kp=48, ki=12, kd=0, rate=self.rate) # 6, 3, 0
-        self.attitude_pid_roll = PID(kp=12, ki=12, kd=0, rate=self.rate)  # 6, 3, 0
+        self.attitude_pid_pitch = PID(kp=48, ki=12, kd=0, rate=self.rate) # 6, 3, 0 or 48, 12, 0
+        self.attitude_pid_roll = PID(kp=12, ki=12, kd=0, rate=self.rate)  # 6, 3, 0 or 12, 12, 0
 
     @eagerx.register.states()
     def reset(self):
@@ -323,6 +323,7 @@ class ForceController(EngineNode):
                 # print("accel from applied force", accel) # debug
 
                 # print(f"Force: {total_force}")  # debug
+                p.configureDebugVisualizer(p.COV_ENABLE_GUI,0)
                 p.applyExternalForce(
                     objectUniqueId=objectUniqueId,
                     linkIndex=linkIndex[0],
@@ -365,6 +366,7 @@ class ForceController(EngineNode):
                     total_torque = total_torque + torques_pitchroll[idx] + torques_yaw[idx]
 
                 # print(f"Torque: {total_torque}")  # debug
+                p.configureDebugVisualizer(p.COV_ENABLE_GUI,0)
                 p.applyExternalTorque(
                     objectUniqueId=objectUniqueId,
                     linkIndex=linkIndex[0],
