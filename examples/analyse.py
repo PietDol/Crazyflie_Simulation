@@ -10,12 +10,12 @@ analyse.calculate_differences(id=2, run1=2, run2=1)
 
 # id = plot the error of a certain variable against time from the dataset with the same id as above
 # mode = ['x', 'y', 'z', 'roll', 'pitch', 'yaw']
-# analyse.plot_graph(id=1, mode="x")
-# analyse.plot_graph(id=2, mode="x")
+# analyse.plot_graph_difference(id=1, mode="x")
+# analyse.plot_graph_difference(id=2, mode="x")
 
-# analyse.plot_position(mode="x", runs=[1,2])
-# analyse.plot_position(mode="y", runs=[1,2])
-# analyse.plot_position(mode="z", runs=[1,2])
-# analyse.plot_position(mode="roll", runs=[1,2])
-analyse.plot_position(mode="pitch", runs=[1,2])
-# analyse.plot_position(mode="yaw", runs=[1,2])
+# analyse.plot_graph_comparison(mode="x", runs=[1,2])
+# analyse.plot_graph_comparison(mode="y", runs=[1,2])
+# analyse.plot_graph_comparison(mode="z", runs=[1,2])
+# analyse.plot_graph_comparison(mode="roll", runs=[1,2])
+analyse.plot_graph_comparison(mode="pitch", runs=[1,2])
+# analyse.plot_graph_comparison(mode="yaw", runs=[1,2])

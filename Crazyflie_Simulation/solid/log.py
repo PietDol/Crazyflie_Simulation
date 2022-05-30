@@ -95,7 +95,7 @@ class Analyse:
         else:
             raise KeyError(f"Choose a run from the following options: {self.run_numbers}")
 
-    def plot_graph(self, mode: str, id: int):
+    def plot_graph_difference(self, mode: str, id: int):
         try:
             mode_nr = self.mode_dict[mode]
         except KeyError:
@@ -120,7 +120,7 @@ class Analyse:
 
         plt.show()
 
-    def plot_position(self, mode: str, runs: list):
+    def plot_graph_comparison(self, mode: str, runs: list):
         try:
             mode_nr = self.mode_dict[mode]
 
