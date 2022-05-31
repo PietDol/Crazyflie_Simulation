@@ -95,7 +95,7 @@ class MakePicture(eagerx.Node):
         # init initial image
         self.modulus_prev = 1000
         if self.saveToPreviousRender == True:
-            self.final_image = cv2.imread(f'../Crazyflie_Simulation/solid/Rendering/Images/final_image.png')
+            self.final_image = cv2.imread(f'../Crazyflie_Simulation/solid/Rendering/final_image.png')
         else:
             self.final_image = 0
 
@@ -227,7 +227,7 @@ class MakePicture(eagerx.Node):
                         self.final_image = plot_x(self.final_image)
                     elif self.axis_to_plot == 'y':
                         self.final_image = plot_y(self.final_image)
-                    cv2.imwrite(f'../Crazyflie_Simulation/solid/Rendering/Images/final_image.png', self.final_image)
+                    cv2.imwrite(f'../Crazyflie_Simulation/solid/Rendering/final_image.png', self.final_image)
 
         self.modulus_prev = t_n % self.timestep
 
@@ -380,7 +380,7 @@ class ValidatePID(eagerx.Node):
         current_pos = current_position.msgs[-1].data
         # setpoint = desired_position.msgs[-1].data
         # Choose your validate function
-        setpoint = self.eight_trajectory()
+        setpoint = self.triangular_trajectory()
         # print(setpoint)
         next_force_z = self.gravity + self.pid_z.next_action(current=current_pos[2],
                                                              desired=setpoint[2])
