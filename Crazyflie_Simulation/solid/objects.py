@@ -279,7 +279,7 @@ class Crazyflie(Object):
     @register.engine(entity_id, OdeEngine)
     def ode_engine(spec: ObjectSpec, graph: EngineGraph):
         # Import any object specific entities for this engine
-        import Crazyflie_Simulation.solid.pybullet  # noqa # pylint: disable=unused-import
+        import Crazyflie_Simulation.solid.ode  # noqa # pylint: disable=unused-import
 
         # Set object arguments
         spec.OdeEngine.ode = "Crazyflie_Simulation.solid.eom.crazyflie_ode/crazyflie_ode"
