@@ -15,7 +15,7 @@ analyse.calculate_differences(id=2, run1=2, run2=1)
 
 # analyse.plot_graph_comparison(mode="x", runs=[1,2])
 # analyse.plot_graph_comparison(mode="y", runs=[1,2])
-# analyse.plot_graph_comparison(mode="z", runs=[1,2])
+analyse.plot_graph_comparison(mode="z", runs=[1,2])
 # analyse.plot_graph_comparison(mode="roll", runs=[1,2])
 analyse.plot_graph_comparison(mode="pitch", runs=[1,2])
 # analyse.plot_graph_comparison(mode="yaw", runs=[1,2])

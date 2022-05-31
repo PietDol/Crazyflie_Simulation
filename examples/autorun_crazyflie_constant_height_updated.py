@@ -159,10 +159,10 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
         if engine_mode == "Pybullet":
             # Reset states for Pybullet engine
             states["crazyflie/orientation"] = np.array([0, 0, 0, 1])
-            states["crazyflie/pos"] = np.array([0, 0, 2])
+            states["crazyflie/pos"] = np.array([0, 0, 1])
         elif engine_mode == "Ode":
             # States are: [x, y, z, x_dot, y_dot, z_dot, phi, theta, thrust_state]
-            states["crazyflie/model_state"] = np.array([0, 0, 2, 0, 0, 0, 0, 0, 0])
+            states["crazyflie/model_state"] = np.array([0, 0, 1, 0, 0, 0, 0, 0, 0])
         else:
             raise "Wrong engine_mode selected. Please choose between Pybullet and Ode"
 

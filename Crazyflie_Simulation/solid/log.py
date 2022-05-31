@@ -128,6 +128,7 @@ class Analyse:
                 unit = "m"
             else:
                 unit = "deg"
+
         except KeyError:
             raise KeyError(f"Give one of the following modes as input: {[key for key in self.mode_dict.keys()]}")
 
@@ -138,6 +139,11 @@ class Analyse:
         plt.figure("1")
         for run in runs:
             if run in self.run_numbers:
+                if run == 1:
+                    engine_mode = "Pybullet"
+                elif run == 2:
+                    engine_mode = "Ode"
+
                 plots[run] = self.df[f"{run}.{mode_nr}"]
 
                 if len(runs) <= 2:
@@ -148,7 +154,7 @@ class Analyse:
             else:
                 raise KeyError(f"Choose runs from the following options: {self.run_numbers}")
 
-            plt.plot(time, plots[run], label=f"Run {run}")
+            plt.plot(time, plots[run], label=f"{engine_mode} run")
 
         plt.title(f"{mode} vs. time")
         plt.ylabel(f"{mode} [{unit}]")
