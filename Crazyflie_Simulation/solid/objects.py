@@ -263,6 +263,7 @@ class Crazyflie(Object):
         graph.connect(source=accelerometer.outputs.obs, target=state_estimator.inputs.acceleration)
         graph.connect(source=gyroscope.outputs.obs, target=state_estimator.inputs.angular_velocity)
         graph.connect(source=orientation.outputs.obs, target=state_estimator.inputs.orientation)
+        graph.connect(source=orientation.outputs.obs, target=accelerometer.inputs.orientation)
 
         # Choose between pybullet and state estimator orientation for the attitude PID
         # graph.connect(source=state_estimator.outputs.orientation_state_estimator, target=attitude_pid.inputs.current_attitude)

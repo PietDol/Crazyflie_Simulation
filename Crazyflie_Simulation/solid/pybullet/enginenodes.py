@@ -50,7 +50,8 @@ class AttitudePID(EngineNode):
     def initialize(self):
         # rate / 2 -> so error * 2 and dt * 2 -> so kp / 2 and ki / 4 and kd = kd
         self.attitude_pid_yaw = PID(kp=6, ki=1, kd=0.35, rate=self.rate)
-        self.attitude_pid_pitch = PID(kp=36, ki=12, kd=0, rate=self.rate) # 6, 3, 0 or 48, 12, 0
+        # Constants calculated from Crazyflie: kp = kp, ki = ki * new_rate / old_rate, kd = kd * old_rate / new_rate
+        self.attitude_pid_pitch = PID(kp=6, ki=0.6, kd=0, rate=self.rate) # 6, 3, 0 or 48, 12, 0
         self.attitude_pid_roll = PID(kp=12, ki=12, kd=0, rate=self.rate)  # 6, 3, 0 or 12, 12, 0
 
     @eagerx.register.states()
@@ -118,7 +119,8 @@ class AttitudeRatePID(EngineNode):
 
     def initialize(self):
         self.attitude_rate_pid_yaw = PID(kp=120, ki=16.7, kd=0, rate=self.rate)
-        self.attitude_rate_pid_pitch = PID(kp=250, ki=500, kd=15, rate=self.rate)  # 250, 500, 2.5 or 70 60 2.5
+        # Constants calculated from Crazyflie: kp = kp, ki = ki * new_rate / old_rate, kd = kd * old_rate / new_rate
+        self.attitude_rate_pid_pitch = PID(kp=250, ki=100, kd=12.5, rate=self.rate)  # 250, 500, 2.5
         self.attitude_rate_pid_roll = PID(kp=250, ki=500, kd=2.5, rate=self.rate)
 
     @eagerx.register.states()
@@ -429,10 +431,11 @@ class AccelerometerSensor(EngineNode):
         spec.config.name = name
         spec.config.rate = rate
         spec.config.process = process
-        spec.config.inputs = ["tick", "input_velocity"]
+        spec.config.inputs = ["tick", "input_velocity", "orientation"]
         spec.config.outputs = ["obs"]
 
     def initialize(self):
+        self.gravity = 0.027 * 9.81
         pass
 
     @register.states()
@@ -440,15 +443,25 @@ class AccelerometerSensor(EngineNode):
         """This link sensor is stateless, so nothing happens here."""
         pass
 
-    @register.inputs(tick=UInt64, input_velocity=Float32MultiArray)
+    @register.inputs(tick=UInt64, input_velocity=Float32MultiArray, orientation=Float32MultiArray)
     @register.outputs(obs=Float32MultiArray)
-    def callback(self, t_n: float, input_velocity: Msg, tick: Optional[Msg] = None):
+    def callback(self, t_n: float, input_velocity: Msg, orientation: Msg, tick: Optional[Msg] = None):
         """Produces a link sensor measurement called `obs`.
 
         The measurement is published at the specified rate * real_time_factor.
 
         Input `tick` ensures that this node is I/O synchronized with the simulator."""
         # get last and current velocity
+        orientation_euler = pybullet.getEulerFromQuaternion(orientation.msgs[-1].data)
+        roll = orientation_euler[0]
+        pitch = -orientation_euler[1]
+
+        # roll, pitch, yaw = np.pi / 2, np.pi / 4, 0
+        rotation_matrix = np.array([[np.cos(-pitch), 0, -np.sin(-pitch)],
+                                    [-np.sin(-roll) * np.sin(-pitch), np.cos(-roll), -np.sin(-roll) * np.cos(-pitch)],
+                                    [np.cos(-roll) * np.sin(-pitch), np.sin(-roll), np.cos(-roll) * np.cos(-pitch)]])
+        gravity_vector = rotation_matrix.dot(self.gravity)
+
         last = np.array(input_velocity.msgs[0].data)
         # print("last", last) # debug
         try:
@@ -458,10 +471,14 @@ class AccelerometerSensor(EngineNode):
         # print("current", current) # debug
 
         # calculate acceleration dy/dt
-        # todo: This acceleration is not exactly the same as calculated from the applied force in external_force
+
         diff = (current - last) / (1 / self.rate)
-        # print("acceleration", diff)       # debug
-        # print("=" * 50)                   # debug
+        acceleration = diff + gravity_vector
+
+        # print(f"Gravity vector     = {np.round(gravity_vector, 4)}")
+        # print(f"Total acceleration = {np.round(acceleration, 4)}")
+        # print(f"Differentiated     = {np.round(diff, 4)}")
+        # print("=" * 50)
         return dict(obs=Float32MultiArray(data=diff))
 
 

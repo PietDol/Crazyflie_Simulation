@@ -22,14 +22,14 @@ LOG_DIR = os.path.dirname(
 
 
 # todo: check the windows and rates
-def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor, axisToPlot, run_id):
+def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor, axisToPlot, run_id, rate):
     eagerx.initialize("eagerx_core", anonymous=True, log_level=eagerx.log.WARN)
 
     # Define rate
     real_reset = False
-    rate = 220  # 220?
-    safe_rate = 220
-    max_steps = 3600
+    rate = rate  # 220?
+    safe_rate = rate
+    max_steps = int(1500 * rate / 220)
 
     # Initialize empty graph
     graph = Graph.create()
@@ -208,13 +208,15 @@ if __name__ == "__main__":
               saveToPreviousRender=False,
               renderColor="black",
               axisToPlot=axisToPlot,
-              run_id=1)
+              run_id=1,
+              rate=220)
 
     runEagerX("Ode",  # second run
               save_render_image=True,
               saveToPreviousRender=True,
               renderColor="red",
               axisToPlot=axisToPlot,
-              run_id=2)
+              run_id=2,
+              rate=50)
 
     log.save_to_csv()
