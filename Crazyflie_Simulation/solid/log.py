@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from time import localtime, strftime
 import matplotlib.pyplot as plt
+import scipy.stats as stats
 
 
 class Log:
@@ -17,7 +18,7 @@ class Log:
     def add_data(self, position, orientation, run_id: int, rate: int, engine_mode: str, timestamp=None):
         # ODE Conversion hardcode
         if engine_mode == "Ode":
-            orientation = orientation*(180/np.pi)
+            orientation = orientation * (180 / np.pi)
             orientation[1] = -orientation[1]
 
         # position x, y, z
@@ -65,7 +66,7 @@ class Analyse:
         self.directory = directory
         self.df = self.import_dataset(path=directory + filename)
         self.runs = int(len(self.df.loc[1]) / 7)
-        self.run_numbers = [int(self.df.columns.values.tolist()[7*i]) for i in range(self.runs)]
+        self.run_numbers = [int(self.df.columns.values.tolist()[7 * i]) for i in range(self.runs)]
         self.temp_df = "To be assigned"
         self.diff = "To be assigned"
         self.diff_dict = {}
@@ -77,6 +78,8 @@ class Analyse:
             "pitch": 5,
             "yaw": 6
         }
+        self.plots = {}
+        self.plots_difference = []
 
     @staticmethod
     def import_dataset(path: str):
@@ -128,7 +131,6 @@ class Analyse:
                 unit = "m"
             else:
                 unit = "deg"
-
         except KeyError:
             raise KeyError(f"Give one of the following modes as input: {[key for key in self.mode_dict.keys()]}")
 
@@ -136,7 +138,7 @@ class Analyse:
         plots = {}
         plots_difference = []
         time = self.df["1"]
-        plt.figure("1")
+        plt.figure("Position/orientation in time")
         for run in runs:
             if run in self.run_numbers:
                 if run == 1:
@@ -150,7 +152,7 @@ class Analyse:
                     if len(plots_difference) == 0:
                         plots_difference = plots[run]
                     else:
-                        plots_difference -= plots[run]
+                        plots_difference = plots_difference - plots[run]
             else:
                 raise KeyError(f"Choose runs from the following options: {self.run_numbers}")
 
@@ -161,23 +163,35 @@ class Analyse:
         plt.xlabel("Time [s]")
         plt.legend()
 
+        # Plot error
 
-        # difference plot
         # for i in range(1000):
         #     time.pop(i+1)
         #     plots_difference.pop(i+1)
-
-        plt.figure("2")
+        plt.figure("Error in time")
         plots_difference = np.array(plots_difference)
-        plt.plot(time, plots_difference, label=f"{mode} Error")
+        plt.plot(time, plots_difference, label=f"{mode}-error")
         plt.title(f"error {mode} vs. time")
         plt.ylabel(f"{mode} [{unit}]")
         plt.xlabel("Time [s]")
-        print(f"max error in {mode}: {max(plots_difference)} [m]")
+        print(f"max error in {mode}: {max(plots_difference)} [{unit}]")
+        plt.legend()
+
+        # Plot normal distribution
+        plt.figure("Normal distribution")
+        mu = np.mean(plots_difference)
+        variance = np.var(plots_difference)
+        sigma = np.std(plots_difference)
+        x = np.linspace(mu - 3 * sigma, mu + 3 * sigma, 100)
+        plt.plot(x, stats.norm.pdf(x, mu, sigma), label=f"{mode}-error distribution")
+        plt.title(f"Normal distribution of {mode} error")
+        plt.ylabel("Density")
+        plt.xlabel(f"Standard deviation [{unit}]")
+        plt.text(mu - (sigma), 0,
+                 f"Mean: {np.round(mu, 3)} [{unit}]\nVariance: {np.round(variance, 3)} [{unit}]\nStandard deviation: {np.round(sigma, 3)} [{unit}]")
         plt.legend()
 
         plt.show()
-
 
 # df["index"] gives columns
 # df.loc[index] gives rows

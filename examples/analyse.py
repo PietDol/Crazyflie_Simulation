@@ -13,6 +13,7 @@ analyse.calculate_differences(id=2, run1=2, run2=1)
 # analyse.plot_graph_difference(id=1, mode="x")
 # analyse.plot_graph_difference(id=2, mode="x")
 
+
 # analyse.plot_graph_comparison(mode="x", runs=[1,2])
 # analyse.plot_graph_comparison(mode="y", runs=[1,2])
 analyse.plot_graph_comparison(mode="z", runs=[1,2])
