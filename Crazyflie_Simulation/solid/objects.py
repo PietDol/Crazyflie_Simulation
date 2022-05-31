@@ -249,7 +249,8 @@ class Crazyflie(Object):
         # graph.connect(source=external_force.outputs.action_applied, target=accelerometer.inputs.input_force, skip=True)
         graph.connect(source=vel.outputs.obs, target=accelerometer.inputs.input_velocity, window=2)
         graph.connect(source=pos.outputs.obs, sensor="pos")
-        graph.connect(source=vel.outputs.obs, sensor="vel")
+        graph.connect(source=vel.outputs.obs, target=external_force.inputs.velocity)
+        graph.connect(source=external_force.outputs.velocity_out, sensor="vel")
         # graph.connect(source=orientation.outputs.obs, sensor="orientation")
         graph.connect(source=gyroscope.outputs.obs, sensor="gyroscope")
         graph.connect(source=accelerometer.outputs.obs, sensor="accelerometer")
@@ -263,7 +264,7 @@ class Crazyflie(Object):
         graph.connect(source=accelerometer.outputs.obs, target=state_estimator.inputs.acceleration)
         graph.connect(source=gyroscope.outputs.obs, target=state_estimator.inputs.angular_velocity)
         graph.connect(source=orientation.outputs.obs, target=state_estimator.inputs.orientation)
-
+        graph.connect(source=orientation.outputs.obs, target=external_force.inputs.orientation)
         # Choose between pybullet and state estimator orientation for the attitude PID
         # graph.connect(source=state_estimator.outputs.orientation_state_estimator, target=attitude_pid.inputs.current_attitude)
         graph.connect(source=state_estimator.outputs.orientation_pybullet, target=attitude_pid.inputs.current_attitude)
@@ -271,7 +272,7 @@ class Crazyflie(Object):
         graph.connect(source=state_estimator.outputs.orientation_pybullet, sensor="orientation")
         # graph.connect(source=orientation.outputs.obs, target=attitude_pid.inputs.current_attitude)
 
-        # graph.gui()
+        graph.gui()
         # Check graph validity (commented out)
         # graph.is_valid(plot=True)
 

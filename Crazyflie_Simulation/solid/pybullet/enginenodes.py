@@ -256,8 +256,8 @@ class ForceController(EngineNode):
         spec.config.name = name
         spec.config.rate = rate
         spec.config.process = process
-        spec.config.inputs = ["tick", "action"]
-        spec.config.outputs = ["action_applied"]
+        spec.config.inputs = ["tick", "action", "orientation", "velocity"]
+        spec.config.outputs = ["action_applied", "velocity_out"]
 
         # Set parameters, defined by the signature of cls.initialize(...)
         spec.config.links = links if isinstance(links, list) else []
@@ -385,9 +385,9 @@ class ForceController(EngineNode):
         """This force controller is stateless, so nothing happens here."""
         pass
 
-    @register.inputs(tick=UInt64, action=Float32MultiArray)
-    @register.outputs(action_applied=Float32MultiArray)
-    def callback(self, t_n: float, tick: Msg, action: Msg):
+    @register.inputs(tick=UInt64, action=Float32MultiArray, orientation=Float32MultiArray, velocity=Float32MultiArray)
+    @register.outputs(action_applied=Float32MultiArray, velocity_out=Float32MultiArray)
+    def callback(self, t_n: float, tick: Msg, action: Msg, orientation: Msg, velocity: Msg):
         """Produces a link sensor measurement called `obs`.
 
         The measurement is published at the specified rate * real_time_factor.
@@ -398,7 +398,7 @@ class ForceController(EngineNode):
         total_force = self.force_cb(action_to_apply.data)
         self.torque_cb(total_force)
 
-        return dict(action_applied=action_to_apply)
+        return dict(action_applied=action_to_apply, velocity_out=Float32MultiArray(data=velocity))
 
 
 class AccelerometerSensor(EngineNode):
