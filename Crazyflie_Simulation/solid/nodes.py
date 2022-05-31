@@ -81,12 +81,13 @@ class MakePicture(eagerx.Node):
         self.renderColor = renderColor  # blue, red or black for now
         self.axis_to_plot = axisToPlot  # 'x' or 'y' right now
 
-        if self.engine_mode == "Ode":
-            self.sample_length = (0.7 * max_steps) / (
-                self.rate) - self.timestep  # ensure it is rendered at least once, #HARDCODE
-        elif self.engine_mode == "Pybullet":
-            self.sample_length = (0.95 * max_steps) / (
-                self.rate) - self.timestep  # ensure it is rendered at least once, #HARDCODE
+        self.sample_length = (0.95 * max_steps) / (self.rate) - self.timestep
+        # if self.engine_mode == "Ode":
+        #     self.sample_length = (0.7 * max_steps) / (
+        #         self.rate) - self.timestep  # ensure it is rendered at least once, #HARDCODE
+        # elif self.engine_mode == "Pybullet":
+        #     self.sample_length = (0.95 * max_steps) / (
+        #         self.rate) - self.timestep  # ensure it is rendered at least once, #HARDCODE
         # (0.95*max_steps)/(self.rate) - self.timestep #ensure it is rendered at least once, def=2
 
         # AUTO INITIALIZATIONS
@@ -380,7 +381,7 @@ class ValidatePID(eagerx.Node):
         current_pos = current_position.msgs[-1].data
         # setpoint = desired_position.msgs[-1].data
         # Choose your validate function
-        setpoint = self.triangular_trajectory()
+        setpoint = self.eight_trajectory()
         # print(setpoint)
         next_force_z = self.gravity + self.pid_z.next_action(current=current_pos[2],
                                                              desired=setpoint[2])
