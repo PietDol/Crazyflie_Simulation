@@ -70,7 +70,7 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
         # - - - - - - - ODE START - - - - - - -
         # Define Crazyflie Object
         crazyflie = eagerx.Object.make(
-            "Crazyflie", "crazyflie", urdf=urdf_path + "cf2x.urdf", rate=rate,
+            "Crazyflie", "crazyflie", urdf=urdf_path + "cf2x.urdf", rate=safe_rate,
             sensors=["pos", "orientation"],
             actuators=["commanded_thrust", 'commanded_attitude'],
             base_pos=[0, 0, 1], fixed_base=False,
