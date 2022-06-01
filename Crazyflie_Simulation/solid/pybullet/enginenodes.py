@@ -338,7 +338,7 @@ class ForceController(EngineNode):
                 rotor_speed_sum = np.sum(rotor_speed)
                 drag_factor =  - 1 * drag_coefficients * rotor_speed_sum * current_velocity
                 drag = np.dot(rotation_matrix, drag_factor)
-                # total_force += drag
+                total_force += drag
 
                 # print("*********************************")
                 # print(f'current orientation is {rotation_matrix}')
