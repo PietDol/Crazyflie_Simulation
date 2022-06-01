@@ -310,14 +310,45 @@ class ForceController(EngineNode):
         )
 
     @staticmethod
-    def _force_control(p, mode, objectUniqueId, linkIndex, posObj):
+    def _drag_force():
+        test = 4
+        return test
+
+
+    @staticmethod
+    def _force_control(p, mode, objectUniqueId, linkIndex, posObj): # also takes drag into account
         if mode == "external_force":
-            def cb(action):
+            def cb(action, velocity, orientation):
                 pwm = action[:4]
                 forces = np.zeros(len(pwm))
+                rotor_speed = np.zeros(len(pwm))
+                drag_coeff_xy = 9.1785e-7
+                drag_coeff_z = 10.311e-7
+                drag_coefficients = np.array([drag_coeff_xy, drag_coeff_xy, drag_coeff_z])
+                current_velocity = np.array(velocity.msgs[-1].data) # x y z
+                current_orientation = np.array(orientation.msgs[-1].data)
+                rotation_matrix = np.array(p.getMatrixFromQuaternion(current_orientation)).reshape(3, 3)
+
                 for idx, pwm in enumerate(pwm):
                     forces[idx] = (2.130295e-11) * (pwm) ** 2 + (1.032633e-6) * pwm + 5.484560e-4
+                    rotor_speed[idx] = 0.04076521 * pwm + 380.8359 # rotor speed in rad/s (from Sytem Identification Crazyflie paper)
+
                 total_force = np.array([0, 0, np.sum(forces)])
+
+
+                # adding the drag
+                rotor_speed_sum = np.sum(rotor_speed)
+                drag_factor =  - 1 * drag_coefficients * rotor_speed_sum * current_velocity
+                drag = np.dot(rotation_matrix, drag_factor)
+                # total_force += drag
+
+                # print("*********************************")
+                # print(f'current orientation is {rotation_matrix}')
+                # print('velocity', np.array(velocity.msgs[-1].data))
+                # print(f'drag_factor: {drag_factor}')
+                # print(f'rotor_speeds: {rotor_speed}, {rotor_speed_sum}, drag: {drag}')
+                # print(f'total_force is: {total_force}')
+
 
                 # this acceleration differs from acceleration calculated in Accelerometer. Only works when flying straight up
                 # accel = (total_force/0.027) + np.array([0, 0, -9.81]) # debug
@@ -341,6 +372,7 @@ class ForceController(EngineNode):
                 #     posObj=(0, 0, 0),
                 #     flags=p.LINK_FRAME,
                 # )
+                # print(f'forces is :{forces}')
                 return forces
         elif mode == "torque_control":
             # based on coordinate system: https://www.bitcraze.io/documentation/system/platform/cf2-coordinate-system/
@@ -395,8 +427,9 @@ class ForceController(EngineNode):
         Input `tick` ensures that this node is I/O synchronized with the simulator."""
         action_to_apply = action.msgs[-1]
         # action_applied.data = np.array([40000, 40000, 40000, 40000])  # debug
-        total_force = self.force_cb(action_to_apply.data)
+        total_force = self.force_cb(action_to_apply.data, velocity, orientation)
         self.torque_cb(total_force)
+        # print('test', velocity.msgs[-1].data)
 
         return dict(action_applied=action_to_apply, velocity_out=Float32MultiArray(data=velocity))
 
