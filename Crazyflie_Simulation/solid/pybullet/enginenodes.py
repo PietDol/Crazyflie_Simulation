@@ -295,6 +295,7 @@ class ForceController(EngineNode):
             objectid, linkindex = self.robot.parts[pb_name].get_bodyid_linkindex()
             self.objectUniqueId.append(objectid), self.linkIndex.append(linkindex)
 
+        self._p.configureDebugVisualizer(self._p.COV_ENABLE_GUI, 0)
         self.force_cb = self._force_control(
             self._p,
             self.mode,
@@ -354,7 +355,6 @@ class ForceController(EngineNode):
                 # print("accel from applied force", accel) # debug
 
                 # print(f"Force: {total_force}")  # debug
-                p.configureDebugVisualizer(p.COV_ENABLE_GUI,0)
                 p.applyExternalForce(
                     objectUniqueId=objectUniqueId,
                     linkIndex=linkIndex[0],
@@ -398,7 +398,6 @@ class ForceController(EngineNode):
                     total_torque = total_torque + torques_pitchroll[idx] + torques_yaw[idx]
 
                 # print(f"Torque: {total_torque}")  # debug
-                p.configureDebugVisualizer(p.COV_ENABLE_GUI,0)
                 p.applyExternalTorque(
                     objectUniqueId=objectUniqueId,
                     linkIndex=linkIndex[0],
