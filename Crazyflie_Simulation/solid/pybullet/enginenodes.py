@@ -311,12 +311,6 @@ class ForceController(EngineNode):
         )
 
     @staticmethod
-    def _drag_force():
-        test = 4
-        return test
-
-
-    @staticmethod
     def _force_control(p, mode, objectUniqueId, linkIndex, posObj): # also takes drag into account
         if mode == "external_force":
             def cb(action, velocity, orientation):
