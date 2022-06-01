@@ -464,7 +464,6 @@ class AccelerometerSensor(EngineNode):
 
     def initialize(self):
         self.gravity = 0.027 * 9.81
-        pass
 
     @register.states()
     def reset(self):
@@ -554,8 +553,8 @@ class StateEstimator(eagerx.EngineNode):
         self.qz = 0.0
 
         # For overall rate = 240 Hz
-        self.twoKp = 2 * 0.0008  # 2 * 0.4
-        self.twoKi = 2 * 0.0001  # 2 * 0.001
+        self.twoKp = 2 * 0.04  # 2 * 0.4
+        self.twoKi = 2 * 0.001  # 2 * 0.001
         # self.twoKp = 2 * 0.1  # 2 * 0.4
         # self.twoKi = 2 * 0.004  # 2 * 0.001
 
@@ -613,9 +612,9 @@ class StateEstimator(eagerx.EngineNode):
         ax = acceleration[0]
         ay = acceleration[1]
         az = acceleration[2]
-        gx = angular_velocity[0] * np.pi / 180  # convert angular velocities to rad
-        gy = angular_velocity[1] * np.pi / 180
-        gz = angular_velocity[2] * np.pi / 180
+        gx = angular_velocity[0]                # rad/s
+        gy = angular_velocity[1]                # rad/s
+        gz = angular_velocity[2]                # rad/s
 
         # own reset function (not necessary)
         # if self.i % 500 == 0:
@@ -699,15 +698,15 @@ class StateEstimator(eagerx.EngineNode):
         # roll, pitch, yaw = pybullet.getEulerFromQuaternion(np.array([self.qx, self.qy, self.qz, self.qw]))
         # print("attitude from pybullet quaternion to euler = ", self.invert_pitch(np.round(np.array([roll, pitch, yaw]) * 180 / np.pi, 3)))
 
-        return np.array([roll, pitch, yaw]) * 180 / np.pi
+        return np.array([roll, pitch, yaw])
 
     def calculate_attitude_madgwick(self, acceleration, angular_velocity):
         ax = acceleration[0]
         ay = acceleration[1]
         az = acceleration[2]
-        gx = angular_velocity[0] * np.pi / 180  # convert angular velocities to rad
-        gy = angular_velocity[1] * np.pi / 180
-        gz = angular_velocity[2] * np.pi / 180
+        gx = angular_velocity[0]        # rad/s
+        gy = angular_velocity[1]        # rad/s
+        gz = angular_velocity[2]        # rad/s
         dt = (1 / self.rate)
 
         qDot1 = 0.5 * (-self.qx2 * gx - self.qy2 * gy - self.qz2 * gz)
@@ -785,7 +784,7 @@ class StateEstimator(eagerx.EngineNode):
         # roll, pitch, yaw = pybullet.getEulerFromQuaternion(np.array([self.qx2, self.qy2, self.qz2, self.qw2]))
         # print("attitude from pybullet quaternion to euler = ", self.invert_pitch(np.round(np.array([roll, pitch, yaw]) * 180 / np.pi, 3)))
 
-        return np.array([roll, pitch, yaw]) * 180 / np.pi
+        return np.array([roll, pitch, yaw])
 
 # class LinkSensor(EngineNode):
 #     @staticmethod
