@@ -148,7 +148,8 @@ class Crazyflie(Object):
             low=[10000],
             high=[60000],
         )
-
+        if rate == 240:
+            rate = 100
         # Desired attitude
         spec.actuators.commanded_attitude.rate = rate
         spec.actuators.commanded_attitude.space_converter = SpaceConverter.make(
@@ -220,8 +221,9 @@ class Crazyflie(Object):
         spec.PybulletEngine.states.lateral_friction = EngineState.make("PbDynamics", parameter="lateralFriction")
 
         # Create PID engine nodes
-        attitude_pid = EngineNode.make("AttitudePID", "attitude_pid", rate=spec.sensors.pos.rate, n=3)
-        attitude_rate_pid = EngineNode.make("AttitudeRatePID", "attitude_rate_pid", rate=spec.sensors.pos.rate, n=3)
+        attitude_pid = EngineNode.make("AttitudePID", "attitude_pid", rate=spec.actuators.commanded_attitude.rate, n=3)
+        attitude_rate_pid = EngineNode.make("AttitudeRatePID", "attitude_rate_pid",
+                                            rate=spec.actuators.commanded_attitude.rate, n=3)
         power_distribution = EngineNode.make("PowerDistribution", "power_distribution", rate=spec.sensors.pos.rate, n=3)
         # Create actuator engine nodes
         # Rate=None, but we will connect it to an actuator (thus will use the rate set in the agnostic specification)
@@ -266,8 +268,8 @@ class Crazyflie(Object):
         graph.connect(source=orientation.outputs.obs, target=accelerometer.inputs.orientation)
 
         # Choose between pybullet and state estimator orientation for the attitude PID
-        # graph.connect(source=state_estimator.outputs.orientation_state_estimator, target=attitude_pid.inputs.current_attitude)
-        graph.connect(source=state_estimator.outputs.orientation_pybullet, target=attitude_pid.inputs.current_attitude)
+        graph.connect(source=state_estimator.outputs.orientation_state_estimator, target=attitude_pid.inputs.current_attitude)
+        # graph.connect(source=state_estimator.outputs.orientation_pybullet, target=attitude_pid.inputs.current_attitude)
 
         graph.connect(source=state_estimator.outputs.orientation_pybullet, sensor="orientation")
         # graph.connect(source=orientation.outputs.obs, target=attitude_pid.inputs.current_attitude)
@@ -300,9 +302,9 @@ class Crazyflie(Object):
                                       idx=[6, 7])
 
         # Create actuator engine nodes
-        action = EngineNode.make("OdeMultiInput", "crazyflie_ode", rate=spec.actuators.commanded_attitude.rate,
+        action = EngineNode.make("OdeMultiInput", "crazyflie_ode", rate=spec.actuators.commanded_thrust.rate,
                                  process=2, default_action=[10000, 0, 0])
-
+        print(spec.actuators.commanded_thrust.rate)
         # Connect all engine nodes
         graph.add([x, pos, orientation, action])
         # actuator

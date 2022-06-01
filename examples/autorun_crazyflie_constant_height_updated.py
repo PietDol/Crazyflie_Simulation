@@ -22,14 +22,14 @@ LOG_DIR = os.path.dirname(
 
 
 # todo: check the windows and rates
-def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor, axisToPlot, run_id, rate):
+def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor, axisToPlot, run_id, engineRate):
     eagerx.initialize("eagerx_core", anonymous=True, log_level=eagerx.log.WARN)
 
     # Define rate
     real_reset = False
-    rate = rate  # 220?
-    safe_rate = rate
-    max_steps = int(1500 * rate / 220)
+    rate = 240  # 220?
+    safe_rate = engineRate
+    max_steps = 3200
 
     # Initialize empty graph
     graph = Graph.create()
@@ -48,7 +48,7 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
         # - - - - - - - PYBULLET START - - - - - - -
         # Define Crazyflie Object
         crazyflie = eagerx.Object.make(
-            "Crazyflie", "crazyflie", urdf=urdf_path + "cf2x.urdf", rate=rate,
+            "Crazyflie", "crazyflie", urdf=urdf_path + "cf2x.urdf", rate=safe_rate,
             sensors=["pos", "vel", "orientation", "gyroscope", "accelerometer"],
             actuators=["commanded_thrust", "commanded_attitude"],
             base_pos=[0, 0, 1], fixed_base=False,
@@ -159,10 +159,10 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
         if engine_mode == "Pybullet":
             # Reset states for Pybullet engine
             states["crazyflie/orientation"] = np.array([0, 0, 0, 1])
-            states["crazyflie/pos"] = np.array([0, 0, 1])
+            states["crazyflie/pos"] = np.array([0, 0, 2])
         elif engine_mode == "Ode":
             # States are: [x, y, z, x_dot, y_dot, z_dot, phi, theta, thrust_state]
-            states["crazyflie/model_state"] = np.array([0, 0, 1, 0, 0, 0, 0, 0, 0])
+            states["crazyflie/model_state"] = np.array([0, 0, 2, 0, 0, 0, 0, 0, 0])
         else:
             raise "Wrong engine_mode selected. Please choose between Pybullet and Ode"
 
@@ -209,7 +209,7 @@ if __name__ == "__main__":
               renderColor="black",
               axisToPlot=axisToPlot,
               run_id=1,
-              rate=220)
+              engineRate=240)
 
     runEagerX("Ode",  # second run
               save_render_image=True,
@@ -217,6 +217,6 @@ if __name__ == "__main__":
               renderColor="red",
               axisToPlot=axisToPlot,
               run_id=2,
-              rate=50)
+              engineRate=50)
 
     log.save_to_csv()

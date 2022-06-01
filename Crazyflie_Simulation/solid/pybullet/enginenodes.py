@@ -48,11 +48,10 @@ class AttitudePID(EngineNode):
                                                                                     [90, 90, 90], dtype="float32")
 
     def initialize(self):
-        # rate / 2 -> so error * 2 and dt * 2 -> so kp / 2 and ki / 4 and kd = kd
-        self.attitude_pid_yaw = PID(kp=6, ki=1, kd=0.35, rate=self.rate)
         # Constants calculated from Crazyflie: kp = kp, ki = ki * new_rate / old_rate, kd = kd * old_rate / new_rate
-        self.attitude_pid_pitch = PID(kp=6, ki=0.6, kd=0, rate=self.rate) # 6, 3, 0 or 48, 12, 0
-        self.attitude_pid_roll = PID(kp=12, ki=12, kd=0, rate=self.rate)  # 6, 3, 0 or 12, 12, 0
+        self.attitude_pid_yaw = PID(kp=6, ki=0.2, kd=1.75, rate=self.rate)  # 6, 1, 0.35
+        self.attitude_pid_pitch = PID(kp=6, ki=0.6, kd=0, rate=self.rate)   # 6, 3, 0 or 48, 12, 0
+        self.attitude_pid_roll = PID(kp=6, ki=0.6, kd=0, rate=self.rate)    # 6, 3, 0 or 12, 12, 0
 
     @eagerx.register.states()
     def reset(self):
@@ -118,10 +117,10 @@ class AttitudeRatePID(EngineNode):
                                                                                     dtype="float32")
 
     def initialize(self):
-        self.attitude_rate_pid_yaw = PID(kp=120, ki=16.7, kd=0, rate=self.rate)
         # Constants calculated from Crazyflie: kp = kp, ki = ki * new_rate / old_rate, kd = kd * old_rate / new_rate
+        self.attitude_rate_pid_yaw = PID(kp=120, ki=3.34, kd=0, rate=self.rate)
         self.attitude_rate_pid_pitch = PID(kp=250, ki=100, kd=12.5, rate=self.rate)  # 250, 500, 2.5
-        self.attitude_rate_pid_roll = PID(kp=250, ki=500, kd=2.5, rate=self.rate)
+        self.attitude_rate_pid_roll = PID(kp=250, ki=100, kd=12.5, rate=self.rate)
 
     @eagerx.register.states()
     def reset(self):
@@ -317,8 +316,11 @@ class ForceController(EngineNode):
             def cb(action):
                 pwm = action[:4]
                 forces = np.zeros(len(pwm))
+                factor = 1.03   # To correct for hover PWM difference between ODE engine and pybullet engine
+                offset = 1000
                 for idx, pwm in enumerate(pwm):
-                    forces[idx] = (2.130295e-11) * (pwm) ** 2 + (1.032633e-6) * pwm + 5.484560e-4
+                    forces[idx] = ((2.130295e-11) * (pwm*factor) ** 2 + (1.032633e-6) * (pwm*factor) + 5.484560e-4)
+                    # forces[idx] = ((2.130295e-11) * (pwm + offset) ** 2 + (1.032633e-6) * (pwm + offset) + 5.484560e-4)
                 total_force = np.array([0, 0, np.sum(forces)])
 
                 # this acceleration differs from acceleration calculated in Accelerometer. Only works when flying straight up
