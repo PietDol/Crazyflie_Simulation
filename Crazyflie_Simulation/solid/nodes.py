@@ -433,6 +433,30 @@ class ValidatePID(eagerx.Node):
         self.i += 1
         return setpoint
 
+    def rectangle_trajectory(self, length=2, start=[0, 0, 2], speed=1):
+        time = 8 * length / speed
+        start = np.array(start) # + np.array([-length/2, 0, -length/2])
+        steps = int(time * self.rate)
+        point_zero = start
+        point_one= start + np.array([length, 0 , 0])
+        point_two = start + np.array([length, 0 , length])
+        point_three = start + np.array([0, 0 , length])
+        points = [point_zero, point_one, point_two, point_three]
+        print(f'points is {points}')
+
+        i = self.i % steps
+        if i < steps / 4:
+            setpoint = points[0]
+        elif i < 2 * steps / 4:
+            setpoint = points[1]
+        elif i < 3 * steps /4:
+            setpoint = points[2]
+        else:
+            setpoint = points[3]
+
+        self.i += 1
+        return setpoint
+
     def circular_trajectory(self, radius=1, origin=[0, 0, 2], speed=1):
         circle_length = radius * 2 * np.pi
         time = circle_length / speed
