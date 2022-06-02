@@ -50,8 +50,8 @@ class AttitudePID(EngineNode):
     def initialize(self):
         # Constants calculated from Crazyflie: kp = kp, ki = ki * new_rate / old_rate, kd = kd * old_rate / new_rate
         self.attitude_pid_yaw = PID(kp=6, ki=0.2, kd=1.75, rate=self.rate)  # 6, 1, 0.35
-        self.attitude_pid_pitch = PID(kp=6, ki=0.6, kd=0, rate=self.rate)   # 6, 3, 0 or 48, 12, 0
-        self.attitude_pid_roll = PID(kp=6, ki=0.6, kd=0, rate=self.rate)    # 6, 3, 0 or 12, 12, 0
+        self.attitude_pid_pitch = PID(kp=6, ki=0.6, kd=0, rate=self.rate)  # 6, 3, 0 or 48, 12, 0
+        self.attitude_pid_roll = PID(kp=6, ki=0.6, kd=0, rate=self.rate)  # 6, 3, 0 or 12, 12, 0
 
     @eagerx.register.states()
     def reset(self):
@@ -215,8 +215,8 @@ class PowerDistribution(EngineNode):
         # print(f"======\n calculated control = {calculated_control_input} \n desired thrust {desired_thrust_input}") #debug
 
         # limit motorpowers
-        roll = roll/2
-        pitch = pitch/2
+        roll = roll / 2
+        pitch = pitch / 2
         motorPower_m1 = self.limitThrust(desired_thrust_input - roll + pitch + yaw)
         motorPower_m2 = self.limitThrust(desired_thrust_input - roll - pitch - yaw)
         motorPower_m3 = self.limitThrust(desired_thrust_input + roll - pitch + yaw)
@@ -316,10 +316,10 @@ class ForceController(EngineNode):
             def cb(action):
                 pwm = action[:4]
                 forces = np.zeros(len(pwm))
-                factor = 1.03   # To correct for hover PWM difference between ODE engine and pybullet engine
+                factor = 1.03  # To correct for hover PWM difference between ODE engine and pybullet engine
                 offset = 1000
                 for idx, pwm in enumerate(pwm):
-                    forces[idx] = ((2.130295e-11) * (pwm*factor) ** 2 + (1.032633e-6) * (pwm*factor) + 5.484560e-4)
+                    forces[idx] = ((2.130295e-11) * (pwm * factor) ** 2 + (1.032633e-6) * (pwm * factor) + 5.484560e-4)
                     # forces[idx] = ((2.130295e-11) * (pwm + offset) ** 2 + (1.032633e-6) * (pwm + offset) + 5.484560e-4)
                 total_force = np.array([0, 0, np.sum(forces)])
 
@@ -329,7 +329,7 @@ class ForceController(EngineNode):
                 # print("accel from applied force", accel) # debug
 
                 # print(f"Force: {total_force}")  # debug
-                p.configureDebugVisualizer(p.COV_ENABLE_GUI,0)
+                p.configureDebugVisualizer(p.COV_ENABLE_GUI, 0)
                 p.applyExternalForce(
                     objectUniqueId=objectUniqueId,
                     linkIndex=linkIndex[0],
@@ -372,7 +372,7 @@ class ForceController(EngineNode):
                     total_torque = total_torque + torques_pitchroll[idx] + torques_yaw[idx]
 
                 # print(f"Torque: {total_torque}")  # debug
-                p.configureDebugVisualizer(p.COV_ENABLE_GUI,0)
+                p.configureDebugVisualizer(p.COV_ENABLE_GUI, 0)
                 p.applyExternalTorque(
                     objectUniqueId=objectUniqueId,
                     linkIndex=linkIndex[0],
@@ -437,7 +437,7 @@ class AccelerometerSensor(EngineNode):
         spec.config.outputs = ["obs"]
 
     def initialize(self):
-        self.gravity = 0.027 * 9.81
+        self.gravity = np.array([0, 0, 9.81])
         pass
 
     @register.states()
@@ -463,6 +463,7 @@ class AccelerometerSensor(EngineNode):
                                     [-np.sin(-roll) * np.sin(-pitch), np.cos(-roll), -np.sin(-roll) * np.cos(-pitch)],
                                     [np.cos(-roll) * np.sin(-pitch), np.sin(-roll), np.cos(-roll) * np.cos(-pitch)]])
         gravity_vector = rotation_matrix.dot(self.gravity)
+        # print(gravity_vector)
 
         last = np.array(input_velocity.msgs[0].data)
         # print("last", last) # debug
@@ -481,7 +482,7 @@ class AccelerometerSensor(EngineNode):
         # print(f"Total acceleration = {np.round(acceleration, 4)}")
         # print(f"Differentiated     = {np.round(diff, 4)}")
         # print("=" * 50)
-        return dict(obs=Float32MultiArray(data=diff))
+        return dict(obs=Float32MultiArray(data=acceleration))
 
 
 class StateEstimator(eagerx.EngineNode):
@@ -528,8 +529,8 @@ class StateEstimator(eagerx.EngineNode):
         self.qz = 0.0
 
         # For overall rate = 240 Hz
-        self.twoKp = 2 * 0.0008  # 2 * 0.4
-        self.twoKi = 2 * 0.0001  # 2 * 0.001
+        self.twoKp = 2 * 0.4  # 2 * 0.4
+        self.twoKi = 2 * 0.0005  # 2 * 0.001
         # self.twoKp = 2 * 0.1  # 2 * 0.4
         # self.twoKi = 2 * 0.004  # 2 * 0.001
 
@@ -561,16 +562,16 @@ class StateEstimator(eagerx.EngineNode):
         # Crazyflie default state estimator
         attitude_calculated = np.array(self.calculate_attitude(acceleration, angular_velocity))
         # Crazyflie Madgwick state estimator
-        attitude_calculated_madgwick = np.array(self.calculate_attitude_madgwick(acceleration, angular_velocity))
+        # attitude_calculated_madgwick = np.array(self.calculate_attitude_madgwick(acceleration, angular_velocity))
 
         # The pybullet output
         attitude = np.array(pybullet.getEulerFromQuaternion(orientation.msgs[-1].data)) * 180 / np.pi
         attitude_pitch_inverted = self.invert_pitch(attitude)
 
-        # print(f"Pybullet  [qx, qy, qz, qw] = {orientation.msgs[-1].data}")
+        # print(f"Pybullet  [qx, qy, qz, qw] = {orientation.msgs[-1].data}");
         # print("attitude from pybullet with inverted pitch = ", np.round(attitude_pitch_inverted, 3))
         # print("attitude from state estimator default      = ", np.round(attitude_calculated, 3))
-        # print("attitude from state estimator madgwick     = ", np.round(attitude_calculated_madgwick, 3))
+        # print("attitude from state estimator Madgwick     = ", np.round(attitude_calculated_madgwick, 3))
         # print("=" * 80)
         return dict(orientation_state_estimator=Float32MultiArray(data=attitude_calculated),
                     orientation_pybullet=Float32MultiArray(data=attitude_pitch_inverted))
@@ -587,9 +588,9 @@ class StateEstimator(eagerx.EngineNode):
         ax = acceleration[0]
         ay = acceleration[1]
         az = acceleration[2]
-        gx = angular_velocity[0] * np.pi / 180  # convert angular velocities to rad
-        gy = angular_velocity[1] * np.pi / 180
-        gz = angular_velocity[2] * np.pi / 180
+        gx = angular_velocity[0]  # * np.pi / 180  # convert angular velocities to rad
+        gy = angular_velocity[1]  # * np.pi / 180
+        gz = angular_velocity[2]  # * np.pi / 180
 
         # own reset function (not necessary)
         # if self.i % 500 == 0:
@@ -656,6 +657,7 @@ class StateEstimator(eagerx.EngineNode):
         gravX = 2 * (self.qx * self.qz - self.qw * self.qy)
         gravY = 2 * (self.qw * self.qx + self.qy * self.qz)
         gravZ = self.qw ** 2 - self.qx ** 2 - self.qy ** 2 + self.qz ** 2
+        # print(f"The direction of the gravitational vector   = {np.array([gravX, gravY, gravZ])}")
         if gravX > 1:
             gravX = 1
         elif gravX < -1:
@@ -668,20 +670,20 @@ class StateEstimator(eagerx.EngineNode):
         pitch = np.arcsin(gravX) * 180 / np.pi  # here is the pitch inverted
         roll = np.arctan(gravY / gravZ) * 180 / np.pi
 
-        # print(f"estimated direction of gravity = {[gravX, gravY, gravZ]}")
+        # print(f"estimated direction of gravity = {np.round(np.array([gravX, gravY, gravZ]), 4)}")
         # print(f"Crazyflie default [qx, qy, qz, qw]        = {[self.qx, self.qy, self.qz, self.qw]}")
         # roll, pitch, yaw = pybullet.getEulerFromQuaternion(np.array([self.qx, self.qy, self.qz, self.qw]))
         # print("attitude from pybullet quaternion to euler = ", self.invert_pitch(np.round(np.array([roll, pitch, yaw]) * 180 / np.pi, 3)))
 
-        return np.array([roll, pitch, yaw]) * 180 / np.pi
+        return np.array([roll, pitch, yaw])
 
     def calculate_attitude_madgwick(self, acceleration, angular_velocity):
         ax = acceleration[0]
         ay = acceleration[1]
         az = acceleration[2]
-        gx = angular_velocity[0] * np.pi / 180  # convert angular velocities to rad
-        gy = angular_velocity[1] * np.pi / 180
-        gz = angular_velocity[2] * np.pi / 180
+        gx = angular_velocity[0]  # * np.pi / 180  # convert angular velocities to rad
+        gy = angular_velocity[1]  # * np.pi / 180
+        gz = angular_velocity[2]  # * np.pi / 180
         dt = (1 / self.rate)
 
         qDot1 = 0.5 * (-self.qx2 * gx - self.qy2 * gy - self.qz2 * gz)
@@ -759,7 +761,7 @@ class StateEstimator(eagerx.EngineNode):
         # roll, pitch, yaw = pybullet.getEulerFromQuaternion(np.array([self.qx2, self.qy2, self.qz2, self.qw2]))
         # print("attitude from pybullet quaternion to euler = ", self.invert_pitch(np.round(np.array([roll, pitch, yaw]) * 180 / np.pi, 3)))
 
-        return np.array([roll, pitch, yaw]) * 180 / np.pi
+        return np.array([roll, pitch, yaw])
 
 # class LinkSensor(EngineNode):
 #     @staticmethod

@@ -179,6 +179,7 @@ class Analyse:
         plt.legend()
 
         # Plot normal distribution
+        plots_difference = np.abs(plots_difference)
         plt.figure("Normal distribution")
         mu = np.mean(plots_difference)
         variance = np.var(plots_difference)
