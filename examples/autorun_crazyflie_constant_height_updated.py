@@ -29,7 +29,7 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
     real_reset = False
     rate = 240  # 220?
     safe_rate = engineRate
-    max_steps = 3200
+    max_steps = 3000
 
     # Initialize empty graph
     graph = Graph.create()
@@ -150,6 +150,7 @@ def runEagerX(engine_mode, save_render_image, saveToPreviousRender, renderColor,
             done = False
         # done = done | (np.linalg.norm(goal - can) < 0.1 and can[2] < 0.05)  # Can has not fallen down & within threshold.
         # done = False
+        # print(steps)
         return obs, rwd, done, info
 
     # Define reset function

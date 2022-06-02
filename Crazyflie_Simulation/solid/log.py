@@ -142,9 +142,9 @@ class Analyse:
         for run in runs:
             if run in self.run_numbers:
                 if run == 1:
-                    engine_mode = "Pybullet"
+                    engine_mode = "PyBullet"
                 elif run == 2:
-                    engine_mode = "Ode"
+                    engine_mode = "ODE"
 
                 plots[run] = self.df[f"{run}.{mode_nr}"]
 
@@ -161,8 +161,8 @@ class Analyse:
         plt.title(f"{mode} vs. time")
         plt.ylabel(f"{mode} [{unit}]")
         plt.xlabel("Time [s]")
-        plt.savefig(f'../Crazyflie_Simulation/solid/Analytics/{mode}_plot_.png')
         plt.legend()
+        plt.savefig(f'../Crazyflie_Simulation/solid/Analytics/{mode}_plot_.png')
 
         # Plot error
         plt.figure("Error in time")
@@ -171,12 +171,12 @@ class Analyse:
         #     plots_difference.pop(i+1)
         plots_difference = np.array(plots_difference)
         plt.plot(time, plots_difference, label=f"{mode}-error")
-        plt.title(f"{mode} error vs. time\nMax error in {mode}: {np.round(max(plots_difference), 4)} [{unit}]")
+        plt.title(f"{mode} error vs. time\nMax error in {mode}: {np.round(max(plots_difference), 7)} [{unit}]")
         plt.ylabel(f"{mode} [{unit}]")
         plt.xlabel("Time [s]")
         print(f"max error in {mode}: {max(plots_difference)} [{unit}]")
-        plt.savefig(f'../Crazyflie_Simulation/solid/Analytics/{mode}_error_.png')
         plt.legend()
+        plt.savefig(f'../Crazyflie_Simulation/solid/Analytics/{mode}_error_.png')
 
         # Plot normal distribution
         plots_difference = np.abs(plots_difference)
@@ -190,9 +190,9 @@ class Analyse:
         plt.ylabel("Density")
         plt.xlabel(f"Standard deviation [{unit}]")
         plt.text(mu - (sigma), 0,
-                 f"Mean: {np.round(mu, 3)} [{unit}]\nVariance: {np.round(variance, 3)} [{unit}]\nStandard deviation: {np.round(sigma, 3)} [{unit}]")
-        plt.savefig(f'../Crazyflie_Simulation/solid/Analytics/{mode}_distrib_.png')
+                 f"Mean: {np.round(mu, 7)} [{unit}]\nVariance: {np.round(variance, 7)} [{unit}]\nStandard deviation: {np.round(sigma, 7)} [{unit}]")
         plt.legend()
+        plt.savefig(f'../Crazyflie_Simulation/solid/Analytics/{mode}_distrib_.png')
 
         plt.show()
 

@@ -381,7 +381,14 @@ class ValidatePID(eagerx.Node):
         current_pos = current_position.msgs[-1].data
         # setpoint = desired_position.msgs[-1].data
         # Choose your validate function
+
+        # Choose trajectory
+        # For eight_trajectory: 3000 steps, startpoint: 0, 0, 2
+        # For line_trajectory: 1750 steps, startpoint: 0, 0, 2
+        # For rectangle_trajectory: 3500 steps, startpoint: -1, 0, 1. Optional: self.timestep to 0.15
+        # For triangle_trajectory: 1500 steps, startpoint: -1, 0, 1
         setpoint = self.eight_trajectory()
+
         # print(setpoint)
         next_force_z = self.gravity + self.pid_z.next_action(current=current_pos[2],
                                                              desired=setpoint[2])
@@ -435,24 +442,25 @@ class ValidatePID(eagerx.Node):
 
     def rectangle_trajectory(self, length=2, start=[0, 0, 2], speed=1):
         time = 8 * length / speed
-        start = np.array(start) # + np.array([-length/2, 0, -length/2])
+        start = np.array(start)  + np.array([-length/2, 0, -length/2])
         steps = int(time * self.rate)
         point_zero = start
         point_one= start + np.array([length, 0 , 0])
         point_two = start + np.array([length, 0 , length])
         point_three = start + np.array([0, 0 , length])
         points = [point_zero, point_one, point_two, point_three]
-        print(f'points is {points}')
+        # print(f'points is {points}')
 
         i = self.i % steps
+
         if i < steps / 4:
-            setpoint = points[0]
-        elif i < 2 * steps / 4:
             setpoint = points[1]
-        elif i < 3 * steps /4:
+        elif i < 2 * steps / 4:
             setpoint = points[2]
-        else:
+        elif i < 3 * steps /4:
             setpoint = points[3]
+        else:
+            setpoint = points[0]
 
         self.i += 1
         return setpoint
@@ -473,7 +481,7 @@ class ValidatePID(eagerx.Node):
 
         return setpoint
 
-    def triangular_trajectory(self, line_length=2, startpoint=[0, 0, 1], speed=1):
+    def triangle_trajectory(self, line_length=2, startpoint=[-1, 0, 1], speed=1):
         time = line_length * 3 / speed
         steps = int(time * self.rate)
         startpoint = np.array(startpoint)
