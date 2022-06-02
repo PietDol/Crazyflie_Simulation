@@ -450,7 +450,7 @@ class ValidatePID(eagerx.Node):
         return setpoint
 
     def triangular_trajectory(self, line_length=2, startpoint=[0, 0, 1], speed=1):
-        time = line_length * 6 / speed
+        time = line_length * 3 / speed
         steps = int(time * self.rate)
         startpoint = np.array(startpoint)
         point1 = startpoint
@@ -460,14 +460,19 @@ class ValidatePID(eagerx.Node):
 
         i = self.i % steps
         if i < steps / 3:
-            setpoint = points[0]
+            segment = points[0] - points[2]
+            segment_part = segment / (steps / 3)
+            setpoint = points[2] + segment_part * i
         elif i < 2 * steps / 3:
-            setpoint = points[1]
+            segment = points[1] - points[0]
+            segment_part = segment / (steps / 3)
+            setpoint = points[0] + segment_part * (i - steps / 3)
         else:
-            setpoint = points[2]
+            segment = points[2] - points[1]
+            segment_part = segment / (steps / 3)
+            setpoint = points[1] + segment_part * (i - 2 * steps / 3)
 
         self.i += 1
-
         return setpoint
 
     def eight_trajectory(self, radius=1, origin=[0, 0, 2], speed=1):

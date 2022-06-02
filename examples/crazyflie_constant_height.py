@@ -84,20 +84,20 @@ if __name__ == "__main__":
         raise "Wrong engine_mode selected. Please choose between Pybullet and Ode"
 
     # Add picture making node and EDIT CONFIGURATION
-    make_picture = eagerx.Node.make(
-        "MakePicture", "make_picture", rate,
-        save_render_image=save_render_image,
-        saveToPreviousRender=saveToPreviousRender,
-        renderColor=renderColor, #choose between black, red, blue
-        axisToPlot=axisToPlot, #choose between x, y
-        max_steps=max_steps,
-        engine_mode=engine_mode,
-    )
+    # make_picture = eagerx.Node.make(
+    #     "MakePicture", "make_picture", rate,
+    #     save_render_image=save_render_image,
+    #     saveToPreviousRender=saveToPreviousRender,
+    #     renderColor=renderColor, #choose between black, red, blue
+    #     axisToPlot=axisToPlot, #choose between x, y
+    #     max_steps=max_steps,
+    #     engine_mode=engine_mode,
+    # )
     # Create agnostic graph
-    graph.add([make_picture, crazyflie, validate_pid])
-    # graph.add(crazyflie)
+    # graph.add([make_picture, crazyflie, validate_pid])
+    graph.add(crazyflie)
     # graph.add(pid_height)
-    # graph.add(validate_pid)
+    graph.add(validate_pid)
 
     # Connect Crazyflie inputs
     # graph.connect(action="desired_attitude", target=crazyflie.actuators.commanded_attitude)
