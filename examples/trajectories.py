@@ -60,7 +60,7 @@ def eight(im):
 
     return im
 
-g
+
 trajectory = eight(base)
 trajectory = legenda(trajectory)
 cv2.imshow('displaymywindows', trajectory)
