@@ -107,11 +107,14 @@ class MakePicture(eagerx.Node):
 
         # init render color gradients in BGR format
         if self.renderColor == "greenblue":
-            self.renderColorTest = [np.linspace(155, 255, max_steps), np.linspace(255, 155, max_steps), np.zeros(max_steps)]
+            self.renderColorTest = [np.linspace(155, 255, max_steps), np.linspace(255, 155, max_steps),
+                                    np.zeros(max_steps)]
         elif self.renderColor == "purplepink":
-            self.renderColorTest = [np.linspace(155, 255, max_steps), np.zeros(max_steps), np.linspace(155, 255, max_steps)]
+            self.renderColorTest = [np.linspace(155, 255, max_steps), np.zeros(max_steps),
+                                    np.linspace(155, 255, max_steps)]
         elif self.renderColor == "greyblack":
-            self.renderColorTest = [np.linspace(200, 50, max_steps), np.linspace(200, 50, max_steps), np.linspace(200, 50, max_steps)]
+            self.renderColorTest = [np.linspace(200, 50, max_steps), np.linspace(200, 50, max_steps),
+                                    np.linspace(200, 50, max_steps)]
         else:
             self.renderColor = [255, 0, 0]
 
@@ -169,6 +172,17 @@ class MakePicture(eagerx.Node):
                            1)  # make markers on x-axis
             img = cv2.putText(img, str(x_axis[i]), (x - self.text_height * 4, y + 25), self.font, 1.3, (0, 0, 0), 2)
 
+        # render axis labels
+        img = cv2.putText(img, str("Z-axis [m]"), (5, self.offset - 5 * self.text_height), self.font, 1.3, (0, 0, 0), 2)
+        if self.axis_to_plot == 'x':
+            img = cv2.putText(img, str("X-axis [m]"),
+                              (self.width - 2 * self.offset - self.text_height * 0, self.height - 20), self.font, 1.3,
+                              (0, 0, 0), 2)
+        elif self.axis_to_plot == 'y':
+            img = cv2.putText(img, str("Y-axis [m]"),
+                              (self.width - 2 * self.offset - self.text_height * 0, self.height - 20), self.font, 1.3,
+                              (0, 0, 0), 2)
+
         #  create border
         img = cv2.rectangle(img, (self.offset, self.offset), (self.height - self.offset, self.width - self.offset),
                             (0, 0, 0), 1)
@@ -192,13 +206,16 @@ class MakePicture(eagerx.Node):
             y1 = self.offset_top - self.scaling_y * (pos_z + z_correction) + self.offset
             y2 = self.offset_top - self.scaling_y * (pos_z - z_correction) + self.offset
             img = cv2.circle(img, (int(x1),
-                                   int(y1)), 5, [self.renderColorTest[0][i],self.renderColorTest[1][i],self.renderColorTest[2][i]], -1)
+                                   int(y1)), 5,
+                             [self.renderColorTest[0][i], self.renderColorTest[1][i], self.renderColorTest[2][i]], -1)
             img = cv2.circle(img, (int(x2),
-                                   int(y2)), 5, [self.renderColorTest[0][i],self.renderColorTest[1][i],self.renderColorTest[2][i]], -1)
+                                   int(y2)), 5,
+                             [self.renderColorTest[0][i], self.renderColorTest[1][i], self.renderColorTest[2][i]], -1)
             img = cv2.line(img, (int(x1),
                                  int(y1)),
                            (int(x2),
-                            int(y2)), [self.renderColorTest[0][i],self.renderColorTest[1][i],self.renderColorTest[2][i]], 2)
+                            int(y2)),
+                           [self.renderColorTest[0][i], self.renderColorTest[1][i], self.renderColorTest[2][i]], 2)
             return img
 
         def plot_y(img):
@@ -210,13 +227,16 @@ class MakePicture(eagerx.Node):
             y1 = self.offset_top - self.scaling_y * (pos_z + z_correction) + self.offset
             y2 = self.offset_top - self.scaling_y * (pos_z - z_correction) + self.offset
             img = cv2.circle(img, (int(x1),
-                                   int(y1)), 5, [self.renderColorTest[0][i],self.renderColorTest[1][i],self.renderColorTest[2][i]], -1)
+                                   int(y1)), 5,
+                             [self.renderColorTest[0][i], self.renderColorTest[1][i], self.renderColorTest[2][i]], -1)
             img = cv2.circle(img, (int(x2),
-                                   int(y2)), 5, [self.renderColorTest[0][i],self.renderColorTest[1][i],self.renderColorTest[2][i]], -1)
+                                   int(y2)), 5,
+                             [self.renderColorTest[0][i], self.renderColorTest[1][i], self.renderColorTest[2][i]], -1)
             img = cv2.line(img, (int(x1),
                                  int(y1)),
                            (int(x2),
-                            int(y2)), [self.renderColorTest[0][i],self.renderColorTest[1][i],self.renderColorTest[2][i]], 2)
+                            int(y2)),
+                           [self.renderColorTest[0][i], self.renderColorTest[1][i], self.renderColorTest[2][i]], 2)
             return img
 
         # checks which axis is selected to plot
@@ -271,7 +291,7 @@ class MakePicture(eagerx.Node):
         # Debug
         # print(f'The time from the environment node = {t_n}')
 
-        #set current timestep
+        # set current timestep
         if self.i < (self.max_steps - 1):
             self.i += 1
 
@@ -479,12 +499,12 @@ class ValidatePID(eagerx.Node):
 
     def rectangle_trajectory(self, length=2, start=[0, 0, 2], speed=1):
         time = 8 * length / speed
-        start = np.array(start)  + np.array([-length/2, 0, -length/2])
+        start = np.array(start) + np.array([-length / 2, 0, -length / 2])
         steps = int(time * self.rate)
         point_zero = start
-        point_one= start + np.array([length, 0 , 0])
-        point_two = start + np.array([length, 0 , length])
-        point_three = start + np.array([0, 0 , length])
+        point_one = start + np.array([length, 0, 0])
+        point_two = start + np.array([length, 0, length])
+        point_three = start + np.array([0, 0, length])
         points = [point_zero, point_one, point_two, point_three]
         # print(f'points is {points}')
 
@@ -494,7 +514,7 @@ class ValidatePID(eagerx.Node):
             setpoint = points[1]
         elif i < 2 * steps / 4:
             setpoint = points[2]
-        elif i < 3 * steps /4:
+        elif i < 3 * steps / 4:
             setpoint = points[3]
         else:
             setpoint = points[0]
