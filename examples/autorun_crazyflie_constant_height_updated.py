@@ -207,7 +207,7 @@ if __name__ == "__main__":
     runEagerX("Pybullet",  # first run
               save_render_image=True,
               saveToPreviousRender=False,
-              renderColor="black",
+              renderColor="greyblack", #Choose between greyblack, purplepink or greenblue
               axisToPlot=axisToPlot,
               run_id=1,
               engineRate=240)
@@ -215,7 +215,7 @@ if __name__ == "__main__":
     runEagerX("Ode",  # second run
               save_render_image=True,
               saveToPreviousRender=True,
-              renderColor="red",
+              renderColor="purplepink",
               axisToPlot=axisToPlot,
               run_id=2,
               engineRate=50)
