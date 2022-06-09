@@ -381,7 +381,7 @@ class ValidatePID(eagerx.Node):
         current_pos = current_position.msgs[-1].data
         # setpoint = desired_position.msgs[-1].data
         # Choose your validate function
-        setpoint = self.eight_trajectory()
+        setpoint = self.triangular_trajectory(startpoint=[0, 0, 2], speed=1.3)
         # print(setpoint)
         next_force_z = self.gravity + self.pid_z.next_action(current=current_pos[2],
                                                              desired=setpoint[2])
