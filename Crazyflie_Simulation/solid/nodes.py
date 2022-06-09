@@ -58,15 +58,15 @@ class MakePicture(eagerx.Node):
 
     def initialize(self, save_render_image, saveToPreviousRender, renderColor, axisToPlot, max_steps, engine_mode):
         # Change render settings here
-        self.height = 880  # set render height [px]
-        self.width = 880  # set render width [px]
-        self.offset = 40  # offset of the picture from the sides [px]
+        self.height = 940  # set render height [px]
+        self.width = 940  # set render width [px]
+        self.offset = 70  # offset of the picture from the sides [px]
         self.timestep = 0.1  # set timestep for render [s]
         self.length = 10
         self.text_height = 4
         self.font = cv2.FONT_HERSHEY_PLAIN
         self.xrange = [-2.5, 2.5]  # range of x (x in 2D image = to right) [m]
-        self.yrange = [0, 4]  # range of y (y in 2D image = up) [m]
+        self.yrange = [0.9, 3.2]  # range of y (y in 2D image = up) [m]
         self.amountOfDivisions = 11  # amount of divisions on axis, def=9
 
         # set drone arm lengths
@@ -81,7 +81,8 @@ class MakePicture(eagerx.Node):
         self.renderColor = renderColor  # blue, red or black for now
         self.axis_to_plot = axisToPlot  # 'x' or 'y' right now
 
-        self.sample_length = (0.95 * max_steps) / (self.rate) - self.timestep
+        self.sample_length = (1 * max_steps) / (self.rate)
+        self.checkIfSaved = False
         # if self.engine_mode == "Ode":
         #     self.sample_length = (0.7 * max_steps) / (
         #         self.rate) - self.timestep  # ensure it is rendered at least once, #HARDCODE
@@ -90,8 +91,12 @@ class MakePicture(eagerx.Node):
         #         self.rate) - self.timestep  # ensure it is rendered at least once, #HARDCODE
         # (0.95*max_steps)/(self.rate) - self.timestep #ensure it is rendered at least once, def=2
 
+        self.i = 0
+        self.max_steps = max_steps
+        self.inverColorRange = False
+
         # AUTO INITIALIZATIONS
-        print(self.engine_mode)
+        print("Current engine:", self.engine_mode)
 
         # init initial image
         self.modulus_prev = 1000
@@ -100,13 +105,13 @@ class MakePicture(eagerx.Node):
         else:
             self.final_image = 0
 
-        # init render color
-        if self.renderColor == "blue":
-            self.renderColor = [255, 0, 0]
-        elif self.renderColor == "red":
-            self.renderColor = [0, 0, 255]
-        elif self.renderColor == "black":
-            self.renderColor = [0, 0, 0]
+        # init render color gradients in BGR format
+        if self.renderColor == "greenblue":
+            self.renderColorTest = [np.linspace(155, 255, max_steps), np.linspace(255, 155, max_steps), np.zeros(max_steps)]
+        elif self.renderColor == "purplepink":
+            self.renderColorTest = [np.linspace(155, 255, max_steps), np.zeros(max_steps), np.linspace(155, 255, max_steps)]
+        elif self.renderColor == "greyblack":
+            self.renderColorTest = [np.linspace(200, 50, max_steps), np.linspace(200, 50, max_steps), np.linspace(200, 50, max_steps)]
         else:
             self.renderColor = [255, 0, 0]
 
@@ -154,7 +159,7 @@ class MakePicture(eagerx.Node):
             x = self.offset
             y = int(self.height - i * ((self.height - 2 * self.offset) / (self.amountOfDivisions - 1)) - self.offset)
             img = cv2.line(img, (x, y), (x - self.length, y), (0, 0, 0), 1)  # make markers on y-axis
-            img = cv2.putText(img, str(y_axis[i]), (5, y + self.text_height), self.font, 1, (0, 0, 0))
+            img = cv2.putText(img, str(y_axis[i]), (5, y + self.text_height), self.font, 1.3, (0, 0, 0), 2)
 
         for i in range(self.amountOfDivisions):  # add coordinate system to the rendered picture x axis
             x_axis = self.x_axis
@@ -162,7 +167,7 @@ class MakePicture(eagerx.Node):
             y = self.height - self.offset
             img = cv2.line(img, (x, self.height - self.offset), (x, self.height - self.offset + self.length), (0, 0, 0),
                            1)  # make markers on x-axis
-            img = cv2.putText(img, str(x_axis[i]), (x - self.text_height * 4, y + 25), self.font, 1, (0, 0, 0))
+            img = cv2.putText(img, str(x_axis[i]), (x - self.text_height * 4, y + 25), self.font, 1.3, (0, 0, 0), 2)
 
         #  create border
         img = cv2.rectangle(img, (self.offset, self.offset), (self.height - self.offset, self.width - self.offset),
@@ -171,6 +176,11 @@ class MakePicture(eagerx.Node):
         # give the sampled image an axis like for the render image
         if type(self.final_image) is int:
             self.final_image = img
+
+        if self.inverColorRange == False:
+            i = self.i
+        else:
+            i = self.max_steps - 1 - self.i
 
         def plot_x(img):
             """"Changes the plot so that you can see from the x axis side"""
@@ -182,13 +192,13 @@ class MakePicture(eagerx.Node):
             y1 = self.offset_top - self.scaling_y * (pos_z + z_correction) + self.offset
             y2 = self.offset_top - self.scaling_y * (pos_z - z_correction) + self.offset
             img = cv2.circle(img, (int(x1),
-                                   int(y1)), 5, self.renderColor, -1)
+                                   int(y1)), 5, [self.renderColorTest[0][i],self.renderColorTest[1][i],self.renderColorTest[2][i]], -1)
             img = cv2.circle(img, (int(x2),
-                                   int(y2)), 5, self.renderColor, -1)
+                                   int(y2)), 5, [self.renderColorTest[0][i],self.renderColorTest[1][i],self.renderColorTest[2][i]], -1)
             img = cv2.line(img, (int(x1),
                                  int(y1)),
                            (int(x2),
-                            int(y2)), self.renderColor, 2)
+                            int(y2)), [self.renderColorTest[0][i],self.renderColorTest[1][i],self.renderColorTest[2][i]], 2)
             return img
 
         def plot_y(img):
@@ -200,13 +210,13 @@ class MakePicture(eagerx.Node):
             y1 = self.offset_top - self.scaling_y * (pos_z + z_correction) + self.offset
             y2 = self.offset_top - self.scaling_y * (pos_z - z_correction) + self.offset
             img = cv2.circle(img, (int(x1),
-                                   int(y1)), 5, self.renderColor, -1)
+                                   int(y1)), 5, [self.renderColorTest[0][i],self.renderColorTest[1][i],self.renderColorTest[2][i]], -1)
             img = cv2.circle(img, (int(x2),
-                                   int(y2)), 5, self.renderColor, -1)
+                                   int(y2)), 5, [self.renderColorTest[0][i],self.renderColorTest[1][i],self.renderColorTest[2][i]], -1)
             img = cv2.line(img, (int(x1),
                                  int(y1)),
                            (int(x2),
-                            int(y2)), self.renderColor, 2)
+                            int(y2)), [self.renderColorTest[0][i],self.renderColorTest[1][i],self.renderColorTest[2][i]], 2)
             return img
 
         # checks which axis is selected to plot
@@ -217,26 +227,53 @@ class MakePicture(eagerx.Node):
 
         # saving the pictures at the sampled timestep and length
         if self.save_render_image is True:
-            if (t_n % self.timestep) < self.modulus_prev:
-                if t_n <= self.sample_length:
-                    if self.axis_to_plot == 'x':
-                        self.final_image = plot_x(self.final_image)
-                    elif self.axis_to_plot == 'y':
-                        self.final_image = plot_y(self.final_image)
-                else:
-                    if self.axis_to_plot == 'x':
-                        self.final_image = plot_x(self.final_image)
-                    elif self.axis_to_plot == 'y':
-                        self.final_image = plot_y(self.final_image)
+            if (t_n % self.timestep) < self.modulus_prev and t_n <= self.sample_length:
+                # if t_n <= self.sample_length:
+                if self.axis_to_plot == 'x':
+                    self.final_image = plot_x(self.final_image)
+                elif self.axis_to_plot == 'y':
+                    self.final_image = plot_y(self.final_image)
+                # else:
+                #     if self.axis_to_plot == 'x':
+                #         self.final_image = plot_x(self.final_image)
+                #     elif self.axis_to_plot == 'y':
+                #         self.final_image = plot_y(self.final_image)
+                #
+                #     if self.saveToPreviousRender == True and self.check == False:
+                #         testimage = cv2.imread(f'../Crazyflie_Simulation/solid/Rendering/final_image.png')
+                #         self.final_image = cv2.addWeighted(testimage, 0.5, self.final_image, 0.5, 0)
+                #         self.check = True
+                #         cv2.imwrite(f'../Crazyflie_Simulation/solid/Rendering/final_image.png', self.final_image)
+                #     elif self.check == False:
+                #         cv2.imwrite(f'../Crazyflie_Simulation/solid/Rendering/final_image.png', self.final_image)
+            elif t_n > self.sample_length and self.checkIfSaved == False:
+                print("Saving image...")
+                if self.axis_to_plot == 'x':
+                    self.final_image = plot_x(self.final_image)
+                elif self.axis_to_plot == 'y':
+                    self.final_image = plot_y(self.final_image)
+
+                if self.saveToPreviousRender == True:
+                    # testimage = cv2.imread(f'../Crazyflie_Simulation/solid/Rendering/final_image.png')
+                    # self.final_image = cv2.addWeighted(testimage, 0.5, self.final_image, 0.5, 0)
                     cv2.imwrite(f'../Crazyflie_Simulation/solid/Rendering/final_image.png', self.final_image)
+                elif self.checkIfSaved == False:
+                    cv2.imwrite(f'../Crazyflie_Simulation/solid/Rendering/final_image.png', self.final_image)
+
+                self.checkIfSaved = True
 
         self.modulus_prev = t_n % self.timestep
 
         data = img.tobytes("C")
+        # data = self.final_image.tobytes("C")
         msg = Image(data=data, height=self.height, width=self.width, encoding="bgr8", step=3 * self.width)
 
         # Debug
         # print(f'The time from the environment node = {t_n}')
+
+        #set current timestep
+        if self.i < (self.max_steps - 1):
+            self.i += 1
 
         return dict(image=msg, time=Float32(data=t_n))
 
