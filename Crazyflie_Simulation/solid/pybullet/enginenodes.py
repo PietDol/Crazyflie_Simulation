@@ -555,7 +555,7 @@ class StateEstimator(eagerx.EngineNode):
 
         # For overall rate = 240 Hz
         self.twoKp = 2 * 0.4  # 2 * 0.4
-        self.twoKi = 2 * 0.0005  # 2 * 0.001
+        self.twoKi = 2 * 0.00048  # 2 * 0.001
         # self.twoKp = 2 * 0.1  # 2 * 0.4
         # self.twoKi = 2 * 0.004  # 2 * 0.001
 
