@@ -65,8 +65,8 @@ class MakePicture(eagerx.Node):
         self.length = 10
         self.text_height = 4
         self.font = cv2.FONT_HERSHEY_PLAIN
-        self.xrange = [-2.5, 2.5]  # range of x (x in 2D image = to right) [m]
-        self.yrange = [0.9, 3.2]  # range of y (y in 2D image = up) [m]
+        self.xrange = [-3, 3]  # range of x (x in 2D image = to right) [m]
+        self.yrange = [0.9, 2.1]  # range of y (y in 2D image = up) [m]
         self.amountOfDivisions = 11  # amount of divisions on axis, def=9
 
         # set drone arm lengths
@@ -442,9 +442,9 @@ class ValidatePID(eagerx.Node):
         # Choose trajectory
         # For eight_trajectory: 3000 steps, startpoint: 0, 0, 2
         # For line_trajectory: 1750 steps, startpoint: 0, 0, 2
-        # For rectangle_trajectory: 3500 steps, startpoint: -1, 0, 1. Optional: self.timestep to 0.15
+        # For rectangle_trajectory: 3750 steps, startpoint: -1, 0, 1. Optional: self.timestep to 0.15
         # For triangle_trajectory: 1500 steps, startpoint: -1, 0, 1
-        setpoint = self.eight_trajectory()
+        setpoint = self.line_trajectory()
 
         # print(setpoint)
         next_force_z = self.gravity + self.pid_z.next_action(current=current_pos[2],

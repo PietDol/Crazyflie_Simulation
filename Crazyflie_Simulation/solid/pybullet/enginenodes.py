@@ -317,7 +317,7 @@ class ForceController(EngineNode):
             def cb(action, velocity, orientation):
                 pwm = action[:4]
                 forces = np.zeros(len(pwm))
-                factor = 1.03  # To correct for hover PWM difference between ODE engine and pybullet engine
+                factor = 1.03  # To correct for hover PWM difference between ODE engine and pybullet engine 1.03
                 offset = 1000
                 rotor_speed = np.zeros(len(pwm))
                 drag_coeff_xy = 9.1785e-7
