@@ -10,11 +10,9 @@ import cv2
 from typing import Optional, List
 
 
-# todo: implement functions for the nodes
-# todo: check boundaries for all classes
-# todo: integration limit pids
 
 class MakePicture(eagerx.Node):
+    """Class that is used to make a (square) picture of the crazyflie postion in the world"""
     @staticmethod
     @eagerx.register.spec("MakePicture", eagerx.Node)
     def spec(
@@ -83,13 +81,6 @@ class MakePicture(eagerx.Node):
 
         self.sample_length = (1 * max_steps) / (self.rate)
         self.checkIfSaved = False
-        # if self.engine_mode == "Ode":
-        #     self.sample_length = (0.7 * max_steps) / (
-        #         self.rate) - self.timestep  # ensure it is rendered at least once, #HARDCODE
-        # elif self.engine_mode == "Pybullet":
-        #     self.sample_length = (0.95 * max_steps) / (
-        #         self.rate) - self.timestep  # ensure it is rendered at least once, #HARDCODE
-        # (0.95*max_steps)/(self.rate) - self.timestep #ensure it is rendered at least once, def=2
 
         self.i = 0
         self.max_steps = max_steps
@@ -142,6 +133,13 @@ class MakePicture(eagerx.Node):
     @eagerx.register.inputs(position=Float32MultiArray, orientation=Float32MultiArray)
     @eagerx.register.outputs(image=Image, time=Float32)
     def callback(self, t_n: float, position: Msg, orientation: Msg):
+        """"Makes the picture in the seleted axis for every timestep
+
+        :param position: the position of the Crazyflie in x,y,z in the world frame
+        :param orientation: the orientation of the Crazyflie in quaternions in the world frame
+        :return image: return the picture with the axis of the Crazyflie
+        :type image: Image type
+        """
         pos_x, pos_y, pos_z = position.msgs[-1].data[0], position.msgs[-1].data[1], position.msgs[-1].data[2]
 
         if len(orientation.msgs[-1].data) == 4:
@@ -200,7 +198,6 @@ class MakePicture(eagerx.Node):
             """"Changes the plot so that you can see from the x axis side"""
             z_correction = self.arm_length * np.sin(-pitch)
             x_correction = self.arm_length * np.cos(-pitch)
-            # print(f'pitch is: {-pitch*180/np.pi} degrees')
             x1 = self.scaling_x * (pos_x + x_correction) + self.offset_left + self.offset  # for left dot
             x2 = self.scaling_x * (pos_x - x_correction) + self.offset_left + self.offset  # for right dot
             y1 = self.offset_top - self.scaling_y * (pos_z + z_correction) + self.offset
@@ -253,19 +250,7 @@ class MakePicture(eagerx.Node):
                     self.final_image = plot_x(self.final_image)
                 elif self.axis_to_plot == 'y':
                     self.final_image = plot_y(self.final_image)
-                # else:
-                #     if self.axis_to_plot == 'x':
-                #         self.final_image = plot_x(self.final_image)
-                #     elif self.axis_to_plot == 'y':
-                #         self.final_image = plot_y(self.final_image)
-                #
-                #     if self.saveToPreviousRender == True and self.check == False:
-                #         testimage = cv2.imread(f'../Crazyflie_Simulation/solid/Rendering/final_image.png')
-                #         self.final_image = cv2.addWeighted(testimage, 0.5, self.final_image, 0.5, 0)
-                #         self.check = True
-                #         cv2.imwrite(f'../Crazyflie_Simulation/solid/Rendering/final_image.png', self.final_image)
-                #     elif self.check == False:
-                #         cv2.imwrite(f'../Crazyflie_Simulation/solid/Rendering/final_image.png', self.final_image)
+
             elif t_n > self.sample_length and self.checkIfSaved == False:
                 print("Saving image...")
                 if self.axis_to_plot == 'x':
@@ -274,8 +259,6 @@ class MakePicture(eagerx.Node):
                     self.final_image = plot_y(self.final_image)
 
                 if self.saveToPreviousRender == True:
-                    # testimage = cv2.imread(f'../Crazyflie_Simulation/solid/Rendering/final_image.png')
-                    # self.final_image = cv2.addWeighted(testimage, 0.5, self.final_image, 0.5, 0)
                     cv2.imwrite(f'../Crazyflie_Simulation/solid/Rendering/final_image.png', self.final_image)
                 elif self.checkIfSaved == False:
                     cv2.imwrite(f'../Crazyflie_Simulation/solid/Rendering/final_image.png', self.final_image)
@@ -285,11 +268,8 @@ class MakePicture(eagerx.Node):
         self.modulus_prev = t_n % self.timestep
 
         data = img.tobytes("C")
-        # data = self.final_image.tobytes("C")
         msg = Image(data=data, height=self.height, width=self.width, encoding="bgr8", step=3 * self.width)
 
-        # Debug
-        # print(f'The time from the environment node = {t_n}')
 
         # set current timestep
         if self.i < (self.max_steps - 1):
