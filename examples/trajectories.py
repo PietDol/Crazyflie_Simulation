@@ -21,13 +21,13 @@ def legenda(im):
     ### Rechtsonderin
     # rectangle_start = [940-190-70, 940-105-70]
     ### Rechtsbovenin
-    rectangle_start = [940-300-70, 70]
+    rectangle_start = [940-250-70, 70]
     ### Linksbovenin
     # rectangle_start = [60, 60]
     ### Linksonderin
     # rectangle_start = [60, 750]
 
-    rectangle_size = [300, 145]
+    rectangle_size = [250, 145]
 
     # rectangle_pos = [(630, 750), (820, 820)]
     rectangle_pos = [(rectangle_start[0], rectangle_start[1]), (rectangle_start[0] + rectangle_size[0], rectangle_start[1] + rectangle_size[1])]

@@ -253,6 +253,7 @@ class MakePicture(eagerx.Node):
 
             elif t_n > self.sample_length and self.checkIfSaved == False:
                 print("Saving image...")
+                self.final_image = self.legenda(self.final_image)
                 if self.axis_to_plot == 'x':
                     self.final_image = plot_x(self.final_image)
                 elif self.axis_to_plot == 'y':
@@ -276,6 +277,45 @@ class MakePicture(eagerx.Node):
             self.i += 1
 
         return dict(image=msg, time=Float32(data=t_n))
+
+    @staticmethod
+    def legenda(im):
+        green = (0, 255, 0)
+        rectangle_start = [940 - 250 - 70, 70]
+        rectangle_size = [250, 90]
+
+        # rectangle_pos = [(630, 750), (820, 820)]
+        rectangle_pos = [(rectangle_start[0], rectangle_start[1]),
+                         (rectangle_start[0] + rectangle_size[0], rectangle_start[1] + rectangle_size[1])]
+        length_line = 40
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        fontScale = 0.8
+
+        im = cv2.rectangle(im, rectangle_pos[0], rectangle_pos[1], (0, 0, 0), 1)
+        red = [np.linspace(255, 155, length_line), np.zeros(length_line), np.linspace(155, 255, length_line)]
+        black = [np.linspace(200, 50, length_line), np.linspace(200, 50, length_line),
+                 np.linspace(200, 50, length_line)]
+        for i in range(length_line):
+            im = cv2.line(im, (int(rectangle_pos[0][0] + 10 + i * 1.5), rectangle_pos[0][1] + 60),
+                          (rectangle_pos[0][0] + 10 + i, rectangle_pos[0][1] + 60), (red[0][i], red[1][i], red[2][i]),
+                          10)
+            im = cv2.line(im, (int(rectangle_pos[0][0] + 10 + i * 1.5), rectangle_pos[0][1] + 30),
+                          (rectangle_pos[0][0] + 10 + i, rectangle_pos[0][1] + 30),
+                          (black[0][i], black[1][i], black[2][i]), 10)
+            # im = cv2.line(im, (int(rectangle_pos[0][0] + 10 + i * 1.5), rectangle_pos[0][1] + 90),
+            #               (rectangle_pos[0][0] + 10 + i, rectangle_pos[0][1] + 90), green, 10)
+        # im = cv2.putText(im, "1-4", (rectangle_pos[0][0] + 10, rectangle_pos[0][1] + 125), font, fontScale,
+        #                  green, 2)
+        im = cv2.putText(im, "= white-box", (rectangle_pos[0][0] + 80, rectangle_pos[0][1] + 35), font, fontScale,
+                         (0, 0, 0), 2)
+        im = cv2.putText(im, "= black-box", (rectangle_pos[0][0] + 80, rectangle_pos[0][1] + 65), font, fontScale,
+                         (0, 0, 0), 2)
+        # im = cv2.putText(im, "= trajectory", (rectangle_pos[0][0] + 80, rectangle_pos[0][1] + 95), font, fontScale,
+        #                  (0, 0, 0), 2)
+        # im = cv2.putText(im, "= points", (rectangle_pos[0][0] + 80, rectangle_pos[0][1] + 125), font, fontScale,
+        #                  (0, 0, 0), 2)
+
+        return im
 
 
 class HeightPID(eagerx.Node):
