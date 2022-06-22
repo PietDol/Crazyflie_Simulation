@@ -630,5 +630,3 @@ class ValidatePID(eagerx.Node):
         self.i += 1
 
         return setpoint
-
-
