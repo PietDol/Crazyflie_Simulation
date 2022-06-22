@@ -335,6 +335,12 @@ class HeightPID(eagerx.Node):
     @eagerx.register.inputs(current_height=Float32MultiArray, desired_height=Float32MultiArray)
     @eagerx.register.outputs(new_action=Float32MultiArray)
     def callback(self, t_n: float, current_height: Msg, desired_height: Msg):
+        """ In the callback the next force is calculated. After that this is converted to PWM.
+        :param current_height: the current height of the drone.
+        :param desired_height: the desired height of the drone.
+
+        :return dictionary containing the new PWM value.
+         """
         next_force = self.gravity + self.pid.next_action(current=current_height.msgs[-1].data[2],
                                                          desired=desired_height.msgs[-1].data[0])
         next_pwm = np.clip(self.force_to_pwm(next_force), 10000, 60000)
@@ -415,6 +421,14 @@ class ValidatePID(eagerx.Node):
     @eagerx.register.inputs(current_position=Float32MultiArray, desired_position=Float32MultiArray)
     @eagerx.register.outputs(new_attitude=Float32MultiArray, new_thrust=Float32MultiArray)
     def callback(self, t_n: float, current_position: Msg, desired_position: Msg):
+        """ In the callback the desired attitude and thrust are calculated with a PID.
+        :param current_position: the current position of the drone ([x, y, z]).
+        :param desired_position: the desired position which could be used as an input.
+                                 We used one of the trajectories as a setpoint.
+
+        :return dictionary containing the new attitude and thrust.
+                These are the desired attitude and thrust for the drone because this node is used in the agnostic part.
+        """
         current_pos = current_position.msgs[-1].data
         # setpoint = desired_position.msgs[-1].data
         # Choose your validate function
