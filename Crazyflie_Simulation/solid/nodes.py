@@ -126,6 +126,7 @@ class MakePicture(eagerx.Node):
         self.offset_top = abs(
             max(self.y_axis) / (max(self.y_axis) - min(self.y_axis)) * (self.height - 2 * self.offset))
 
+        self.scaling_drone = 200
     @eagerx.register.states()
     def reset(self):
         pass
@@ -198,10 +199,10 @@ class MakePicture(eagerx.Node):
             """"Changes the plot so that you can see from the x axis side"""
             z_correction = self.arm_length * np.sin(-pitch)
             x_correction = self.arm_length * np.cos(-pitch)
-            x1 = self.scaling_x * (pos_x + x_correction) + self.offset_left + self.offset  # for left dot
-            x2 = self.scaling_x * (pos_x - x_correction) + self.offset_left + self.offset  # for right dot
-            y1 = self.offset_top - self.scaling_y * (pos_z + z_correction) + self.offset
-            y2 = self.offset_top - self.scaling_y * (pos_z - z_correction) + self.offset
+            x1 = self.scaling_x * pos_x + self.scaling_drone * x_correction + self.offset_left + self.offset  # for left dot
+            x2 = self.scaling_x * pos_x - self.scaling_drone * x_correction + self.offset_left + self.offset  # for right dot
+            y1 = self.offset_top - self.scaling_y * pos_z - self.scaling_drone * z_correction + self.offset
+            y2 = self.offset_top - self.scaling_y * pos_z + self.scaling_drone * z_correction + self.offset
             img = cv2.circle(img, (int(x1),
                                    int(y1)), 5,
                              [self.renderColorTest[0][i], self.renderColorTest[1][i], self.renderColorTest[2][i]], -1)
@@ -219,10 +220,10 @@ class MakePicture(eagerx.Node):
             """"Changes the plot so that you can see from the y axis side"""
             z_correction = self.arm_length * np.sin(roll)
             y_correction = self.arm_length * np.cos(roll)
-            x1 = self.scaling_x * (pos_y + y_correction) + self.offset_left + self.offset  # for left dot
-            x2 = self.scaling_x * (pos_y - y_correction) + self.offset_left + self.offset  # for right dot
-            y1 = self.offset_top - self.scaling_y * (pos_z + z_correction) + self.offset
-            y2 = self.offset_top - self.scaling_y * (pos_z - z_correction) + self.offset
+            x1 = self.scaling_x * pos_y + self.scaling_drone * y_correction + self.offset_left + self.offset  # for left dot
+            x2 = self.scaling_x * pos_y - self.scaling_drone * y_correction + self.offset_left + self.offset  # for right dot
+            y1 = self.offset_top - self.scaling_y * pos_z + self.scaling_drone * z_correction + self.offset
+            y2 = self.offset_top - self.scaling_y * pos_z - self.scaling_drone * z_correction + self.offset
             img = cv2.circle(img, (int(x1),
                                    int(y1)), 5,
                              [self.renderColorTest[0][i], self.renderColorTest[1][i], self.renderColorTest[2][i]], -1)

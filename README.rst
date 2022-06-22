@@ -28,7 +28,7 @@ different objects. The 3 objects that are currently implemented are:
 How to use the Crazyflie Simulator
 ==============
 You can run the simulation by running
-``autorun_crazyflie_constant_height_updated.py``
+``run_validation.py``
 . This will first run the whitebox-model and then the blackbox-model.
 The length of the simulation can be changed by changing the variable
 ``max_steps``
@@ -60,7 +60,7 @@ The options are:
 - ``rectangle_trajectory()``
 
 To analyse the differences between the to models can be analysed with
-``analyse.py``
+``analyse_validation.py``
 . When this file is run, it will create several plots displaying the differences between the two models.
 
 Cite Crazyflie Simulation
