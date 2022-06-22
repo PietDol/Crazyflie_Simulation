@@ -2,6 +2,9 @@ from math import sin, cos, pi, sqrt
 
 
 def crazyflie_ode(x, t, u, mass, gain_constant, time_constant):
+    """ The ODE calculations obtained from Jacob Kooi
+    source: https://doi.org/10.48550/arXiv.2103.09043
+    """
     # States are: [x, y, z, x_dot, y_dot, z_dot, phi, theta, thrust_state]
     # u = [PWM_c, Phi_c, Theta_c] = [10000 to 60000, deg, deg]
     # param = [mass, gain constant, time constant]
