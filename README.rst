@@ -10,16 +10,16 @@ This package is a simulator for the Crazyflie 2.0, a small developer quadcopter.
 The simulation is implemented in `EAGERx <https://github.com/eager-dev/eagerx>`_ to make it
 possible to easily switch between different simulation models and reality.
 
-The EAGERx framework consist
-agnostic and a engine-specific part. The agnostic part could be a controller that need to be trained
-before it could be used on the real Crazyflie. At the moment it is just a controller(
+The EAGERx framework consist of an
+agnostic and an engine-specific part. The agnostic part could be a controller that needs to be trained
+before it could be used on the real Crazyflie. At the moment it is just a PID controller(
 ``trajectory controller``
 ) that makes the Crazyflie
-go to a certain setpoint. Within the engine-specific part can be chosen between
+go to a certain setpoint. Within the engine-specific part a choice can be made between
 different objects. The 3 objects that are currently implemented are:
 
-1. A blackbox-model developed by Jacob Kooij; in the code referred to as the ODE model [1]
-2. A whitebox-model we developed; in the code referred to as Pybullet
+1. A black-box model developed by Jacob Kooi [1]; in the code referred to as the ODE model
+2. A white-box model we developed; in the code referred to as Pybullet
 3. The real Crazyflie 2.0
 
 .. image:: docs/Blockdiagram_EAGERx.png
@@ -43,14 +43,14 @@ in directory
    :align: center
    :alt: Trajectory
 
-If you want to change the trajectory flown, you can change it in
+If you want to change the trajectory, you can change it in
 ``nodes.py``
 in the following `line <https://github.com/PietDol/Crazyflie_Simulation/blob/7d496a507e3e319f443e8ea8bcbfa8c059118132/Crazyflie_Simulation/solid/nodes.py#L441>`_
 .
 
-```
+``
 setpoint = line_trajectory()
-```
+``
 
 The options are:
 
@@ -61,7 +61,7 @@ The options are:
 
 To analyse the differences between the to models can be analysed with
 ``analyse.py``
-. When this file is run, it will create several plots displaying the differences between the to models.
+. When this file is run, it will create several plots displaying the differences between the two models.
 
 Cite Crazyflie Simulation
 ===============
