@@ -48,9 +48,7 @@ If you want to change the trajectory, you can change it in
 in the following `line <https://github.com/PietDol/Crazyflie_Simulation/blob/7d496a507e3e319f443e8ea8bcbfa8c059118132/Crazyflie_Simulation/solid/nodes.py#L441>`_
 .
 
-``
-setpoint = line_trajectory()
-``
+``setpoint = line_trajectory()``
 
 The options are:
 

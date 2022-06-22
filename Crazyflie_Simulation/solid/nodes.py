@@ -63,8 +63,12 @@ class MakePicture(eagerx.Node):
         self.length = 10
         self.text_height = 4
         self.font = cv2.FONT_HERSHEY_PLAIN
+        # eight: xrange = [-2.5, 2.5] yrange = [0.9, 3.2]
+        # line: xrange = [-3, 3] yrange = [0.9, 2.1]
+        # rectangle: xrange = [-1.5, 1.5] yrange = [0.8, 3.2]
+        # triangle: xrange = [-1.5, 1.5] yrange = [0.8, 3]
         self.xrange = [-3, 3]  # range of x (x in 2D image = to right) [m]
-        self.yrange = [0.9, 2.1]  # range of y (y in 2D image = up) [m]
+        self.yrange = [0.9, 3.2]  # range of y (y in 2D image = up) [m]
         self.amountOfDivisions = 11  # amount of divisions on axis, def=9
 
         # set drone arm lengths
