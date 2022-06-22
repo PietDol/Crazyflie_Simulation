@@ -6,7 +6,12 @@ import scipy.stats as stats
 
 
 class Log:
+    """ Class to add the simulation data to a CSV file """
     def __init__(self, unique_file: bool):
+        """ Initiate the Log object which is called every timestep to add the data.
+
+        :param unique_file: Choose whether a unique filename (based on the time) needs to be created or not.
+        """
         self.unique_file = unique_file
         self.rate = 0
         self.directory = "../Crazyflie_Simulation/solid/Logging/"
@@ -16,6 +21,14 @@ class Log:
         self.runs = []
 
     def add_data(self, position, orientation, run_id: int, rate: int, engine_mode: str, timestamp=None):
+        """ This function is called every timestep to add the data to an array.
+
+        :param position: The position in meters
+        :param orientation: The orientation in euler angles in degrees unless the engine_mode is "ODE"
+        :param run_id: a unique id to distinguish a run of the simulation when several runs are done.
+        :param engine_mode: If the engine_mode is "ODE", than is the orientation converted to degrees and the pitch is inverted
+        :param timestamp: the timestamp in seconds. A calculated timestamp based on the rate is added if it is not provided.
+        """
         # ODE Conversion hardcode
         if engine_mode == "Ode":
             orientation = orientation * (180 / np.pi)
@@ -50,6 +63,7 @@ class Log:
         self.i += 1
 
     def save_to_csv(self):
+        """ Save the data to a CSV file. This is done in one go for the sake of time."""
         self.data.insert(0, len(self.runs) * ["Time", "Pos x", "Pos y", "Pos z", "Roll", "Pitch", "Yaw"])
         id_header = []
         for r in self.runs:
@@ -61,6 +75,7 @@ class Log:
 
 
 class Analyse:
+    """ Class to analyse the data from the CSV file made with the above class Log"""
     def __init__(self, filename: str, directory="../Crazyflie_Simulation/solid/Logging/"):
         self.filename = filename
         self.directory = directory

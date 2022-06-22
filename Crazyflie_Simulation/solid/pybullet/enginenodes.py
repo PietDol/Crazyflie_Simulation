@@ -49,9 +49,10 @@ class AttitudePID(EngineNode):
 
     def initialize(self):
         # Constants calculated from Crazyflie: kp = kp, ki = ki * new_rate / old_rate, kd = kd * old_rate / new_rate
-        self.attitude_pid_yaw = PID(kp=6, ki=0.2, kd=1.75, rate=self.rate)  # 6, 1, 0.35
-        self.attitude_pid_pitch = PID(kp=6, ki=0.6, kd=0, rate=self.rate)  # 6, 3, 0 or 48, 12, 0
-        self.attitude_pid_roll = PID(kp=6, ki=0.6, kd=0, rate=self.rate)  # 6, 3, 0 or 12, 12, 0
+        # Make the pid-controller objects
+        self.attitude_pid_yaw = PID(kp=6, ki=0.2, kd=1.75, rate=self.rate)
+        self.attitude_pid_pitch = PID(kp=6, ki=0.6, kd=0, rate=self.rate)
+        self.attitude_pid_roll = PID(kp=6, ki=0.6, kd=0, rate=self.rate)
 
     @eagerx.register.states()
     def reset(self):
@@ -62,25 +63,22 @@ class AttitudePID(EngineNode):
     @eagerx.register.inputs(desired_attitude=Float32MultiArray, current_attitude=Float32MultiArray)
     @eagerx.register.outputs(new_attitude_rate=Float32MultiArray)
     def callback(self, t_n: float, desired_attitude: Msg, current_attitude: Msg):
-        # Current attitude is a quaternion
+        """ This node implements the attitude PID controller from the Crazyflie.
+        There is a PID controller for every angle (yaw, pitch and roll) calculating the desired attitude rate.
+
+        :param desired_attitude: The desired orientation in euler angles in degrees
+        :param current_attitude: The current orientation in euler angles in degrees
+
+        :return new_attitude_rate: The desired attitude rate (angular velocity) in euler angles in degrees per second send to the AttitudeRatePID node
+        """
+        # Current attitude in degrees
         current_attitude = current_attitude.msgs[-1].data
-        # Desired attitude is in degrees
+        # Desired attitude in degrees
         desired_attitude = desired_attitude.msgs[-1].data
-        # Current attitude from quaternion to euler angles (RPY)
-        # current_attitude_euler = pybullet.getEulerFromQuaternion(current_attitude)
-        current_attitude_euler = current_attitude
-        # Current attitude from radians to degrees
-        current_attitude_deg = current_attitude_euler
-        # current_attitude_deg = np.zeros(3)
-        # for idx, ang in enumerate(current_attitude_euler):
-        #     current_attitude_deg[idx] = ang * 180 / np.pi
 
-        # print(f"Desired attitude: {desired_attitude}")
-        # print(f"Current attitude: {current_attitude_deg}")
-
-        next_roll = self.attitude_pid_roll.next_action(current=current_attitude_deg[0], desired=desired_attitude[0])
-        next_pitch = self.attitude_pid_pitch.next_action(current=current_attitude_deg[1], desired=desired_attitude[1])
-        next_yaw = self.attitude_pid_yaw.next_action(current=current_attitude_deg[2], desired=desired_attitude[2])
+        next_roll = self.attitude_pid_roll.next_action(current=current_attitude[0], desired=desired_attitude[0])
+        next_pitch = self.attitude_pid_pitch.next_action(current=current_attitude[1], desired=desired_attitude[1])
+        next_yaw = self.attitude_pid_yaw.next_action(current=current_attitude[2], desired=desired_attitude[2])
         next_action = np.array([next_roll, next_pitch, next_yaw])
         return dict(new_attitude_rate=Float32MultiArray(data=next_action))
 
@@ -131,11 +129,18 @@ class AttitudeRatePID(EngineNode):
     @eagerx.register.inputs(desired_rate=Float32MultiArray, current_rate=Float32MultiArray)
     @eagerx.register.outputs(new_motor_control=Float32MultiArray)
     def callback(self, t_n: float, desired_rate: Msg, current_rate: Msg):
+        """ This node implements the attitude rate PID controller from the Crazyflie.
+        There is a PID controller for every angle (yaw, pitch and roll) calculating the PWM signal differences
+        to cause the rotation (roll, pitch and yaw).
+
+        :param desired_rate: The desired attitude rate of the Crazyflie (roll, pitch, yaw) in degrees per second
+        :param current_rate: The current attitude rate of the Crazyflie (roll, pitch, yaw) in degrees per second
+
+        :return new_motor_control: The PWM signal difference per angle (roll, pitch, yaw) in a range [-32767, 32767] send to the PowerDistribution node
+        """
         current_attitude_rate = current_rate.msgs[-1].data  # (vx, vy, vz) Roll, pitch, yaw
         desired_attitude_rate = desired_rate.msgs[-1].data
-        # print(f"Current rate: {-current_attitude_rate[1] * 180 / np.pi}")
-        # print(f"Desired rate: {desired_attitude_rate[1]}")
-        # print("-" * 50)
+
         next_roll_rate = self.attitude_rate_pid_roll.next_action(current=current_attitude_rate[0],
                                                                  desired=desired_attitude_rate[0])
         next_pitch_rate = self.attitude_rate_pid_pitch.next_action(current=current_attitude_rate[1],
@@ -144,7 +149,6 @@ class AttitudeRatePID(EngineNode):
                                                                desired=desired_attitude_rate[2])
 
         next_action = np.array([next_roll_rate, next_pitch_rate, next_yaw_rate])
-        # print(next_action)
         return dict(new_motor_control=Float32MultiArray(data=next_action))
 
 
@@ -187,16 +191,18 @@ class PowerDistribution(EngineNode):
     def reset(self):
         pass
 
-    # limit motorpowers definition
-    def limitThrust(self, value):
+    @staticmethod
+    def limitThrust(value):
+        """ Function to limit the maximum PWM value """
         if value > 65535:
             value = 65535
         elif value < 0:
             value = 0
         return value
 
-    # limit minimum idle Thrust definition
-    def limitIdleThrust(self, value, minimum):
+    @staticmethod
+    def limitIdleThrust(value, minimum):
+        """ Function keep the PWM value above a threshold """
         if (value < minimum):
             value = minimum
         return value
@@ -204,17 +210,20 @@ class PowerDistribution(EngineNode):
     @eagerx.register.inputs(desired_thrust=Float32MultiArray, calculated_control=Float32MultiArray)
     @eagerx.register.outputs(pwm_signal=Float32MultiArray)
     def callback(self, t_n: float, desired_thrust: Msg, calculated_control: Msg):
-        desired_thrust.msgs[-1].data  # set input at 30000, moet nog vanuit env/actions komen
+        """ This node implements the power distribution node from the Crazyflie.
+        It calculates the PWM signal per motor with the PWM signal difference per angle and the average thrust.
 
+        :param desired_thrust: The desired average thrust, a value between [0, 65535]
+        :param calculated_control: The PWM signal difference per angle (roll, pitch, yaw) in a range [-32767, 32767]
+
+        :return pwm_signal: The PWM signal per motor send to the ForceController node
+        """
         # define variables from inputs
-        calculated_control_input = calculated_control.msgs[-1].data  # roll pitch yaw
         roll = calculated_control.msgs[-1].data[0]
         pitch = calculated_control.msgs[-1].data[1]
         yaw = calculated_control.msgs[-1].data[2]
         desired_thrust_input = desired_thrust.msgs[-1].data[0]
-        # print(f"======\n calculated control = {calculated_control_input} \n desired thrust {desired_thrust_input}") #debug
 
-        # limit motorpowers
         roll = roll / 2
         pitch = pitch / 2
         motorPower_m1 = self.limitThrust(desired_thrust_input - roll + pitch + yaw)
@@ -229,11 +238,7 @@ class PowerDistribution(EngineNode):
         motorPower_m3 = self.limitIdleThrust(motorPower_m3, minimumIdleThrust)
         motorPower_m4 = self.limitIdleThrust(motorPower_m4, minimumIdleThrust)
 
-        # print(motorPower_m4) # debug
-
-        new_pwm_signal = np.array(
-            [motorPower_m1, motorPower_m2, motorPower_m3, motorPower_m4])  # enginenode verwacht force
-        # new_pwm_signal = np.array([3,3,0])
+        new_pwm_signal = np.array([motorPower_m1, motorPower_m2, motorPower_m3, motorPower_m4])
         return dict(pwm_signal=Float32MultiArray(data=new_pwm_signal))
 
 
@@ -267,7 +272,7 @@ class ForceController(EngineNode):
         spec.config.force_target = force_target if force_target else [0.0] * len(links)
 
     def initialize(self, links, mode, force_target):
-        """Initializes the link sensor node according to the spec."""
+        """Initializes the force controller node according to the spec."""
         self.obj_name = self.config["name"]
         assert self.process == p.ENGINE, (
             "Simulation node requires a reference to the simulator," " hence it must be launched in the Bridge process"
@@ -312,49 +317,44 @@ class ForceController(EngineNode):
         )
 
     @staticmethod
-    def _force_control(p, mode, objectUniqueId, linkIndex, posObj): # also takes drag into account
-        if mode == "external_force":
+    def _force_control(p, mode, objectUniqueId, linkIndex, posObj):
+        if mode == "external_force":  # also takes drag into account
             def cb(action, velocity, orientation):
                 pwm = action[:4]
                 forces = np.zeros(len(pwm))
                 factor = 1.03  # To correct for hover PWM difference between ODE engine and pybullet engine 1.03
-                offset = 1000
+                offset = 1000  # To correct for hover PWM difference between ODE engine and pybullet engine 1000
                 rotor_speed = np.zeros(len(pwm))
                 drag_coeff_xy = 9.1785e-7
                 drag_coeff_z = 10.311e-7
                 drag_coefficients = np.array([drag_coeff_xy, drag_coeff_xy, drag_coeff_z])
-                current_velocity = np.array(velocity.msgs[-1].data) # x y z
+                current_velocity = np.array(velocity.msgs[-1].data)  # x y z
                 current_orientation = np.array(orientation.msgs[-1].data)
                 rotation_matrix = np.array(p.getMatrixFromQuaternion(current_orientation)).reshape(3, 3)
 
+                # Calculation of the force and rotor speed per motor. The formulas are obtained from Sytem Identification Crazyflie paper
+                # source: https://doi.org/10.3929/ethz-b-000214143
                 for idx, pwm in enumerate(pwm):
-                    forces[idx] = ((2.130295e-11) * (pwm * factor) ** 2 + (1.032633e-6) * (pwm * factor) + 5.484560e-4)
-                    # forces[idx] = ((2.130295e-11) * (pwm + offset) ** 2 + (1.032633e-6) * (pwm + offset) + 5.484560e-4)
-                    rotor_speed[idx] = 0.04076521 * pwm + 380.8359 # rotor speed in rad/s (from Sytem Identification Crazyflie paper)
+                    # PWM to forces formula with a pwm_factor to calibrate the model
+                    forces[idx] = ((2.130295e-11) * (pwm * factor) ** 2 + (1.032633e-6) * (
+                            pwm * factor) + 5.484560e-4)  # force in Newton (from Sytem Identification Crazyflie paper)
+
+                    # PWM to forces formula with an offset to calibrate the model
+                    forces[idx] = ((2.130295e-11) * (pwm + offset) ** 2 + (1.032633e-6) * (
+                            pwm + offset) + 5.484560e-4)  # force in Newton (from Sytem Identification Crazyflie paper)
+
+                    rotor_speed[
+                        idx] = 0.04076521 * pwm + 380.8359  # rotor speed in rad/s (from Sytem Identification Crazyflie paper)
 
                 total_force = np.array([0, 0, np.sum(forces)])
 
-
                 # adding the drag
                 rotor_speed_sum = np.sum(rotor_speed)
-                drag_factor =  - 1 * drag_coefficients * rotor_speed_sum * current_velocity
+                drag_factor = - 1 * drag_coefficients * rotor_speed_sum * current_velocity
                 drag = np.dot(rotation_matrix, drag_factor)
                 total_force += drag
 
-                # print("*********************************")
-                # print(f'current orientation is {rotation_matrix}')
-                # print('velocity', np.array(velocity.msgs[-1].data))
-                # print(f'drag_factor: {drag_factor}')
-                # print(f'rotor_speeds: {rotor_speed}, {rotor_speed_sum}, drag: {drag}')
-                # print(f'total_force is: {total_force}')
-
-
-                # this acceleration differs from acceleration calculated in Accelerometer. Only works when flying straight up
-                # accel = (total_force/0.027) + np.array([0, 0, -9.81]) # debug
-                # print("="*50)
-                # print("accel from applied force", accel) # debug
-
-                # print(f"Force: {total_force}")  # debug
+                # Apply the forces on the Crazyflie in Pybullet in the center of the Crazyflie. The moments of the forces are added later.
                 p.applyExternalForce(
                     objectUniqueId=objectUniqueId,
                     linkIndex=linkIndex[0],
@@ -363,16 +363,9 @@ class ForceController(EngineNode):
                     flags=pybullet.LINK_FRAME,
                     physicsClientId=p._client,
                 )
-                # p.applyExternalForce(
-                #     objectUniqueId=1,
-                #     linkIndex=-1,
-                #     forceObj=(0, 0, 0.04 * 9.81),
-                #     posObj=(0, 0, 0),
-                #     flags=p.LINK_FRAME,
-                # )
-                # print(f'forces is :{forces}')
                 return forces
         elif mode == "torque_control":
+            # Calculates the moments caused by the forces and the torques caused by the motors.
             # based on coordinate system: https://www.bitcraze.io/documentation/system/platform/cf2-coordinate-system/
             # motor numbers: https://www.bitcraze.io/documentation/hardware/crazyflie_2_1/crazyflie_2_1-datasheet.pdf
             arm_1 = np.array([0.028, -0.028, 0])
@@ -387,17 +380,18 @@ class ForceController(EngineNode):
                 torques_yaw_direction = np.array([1, -1, 1, -1])
                 total_torque = np.array([0, 0, 0])
                 for idx, force in enumerate(forces):
-                    # Calculate torques from upward forces
-                    torques_pitchroll[idx] = np.cross(arms[idx], np.array([0, 0, force]))
+                    # Calculate moments of the upward forces that causes the pitch and roll
+                    torques_pitchroll[idx] = np.cross(arms[idx], np.array([0, 0, force])) # torque in Newton meter
 
-                    # Calculate torques from yaw input
-                    torque_yaw = 0.005964552 * force + 1.563383E-5
+                    # Calculate torques from the rotor rotation which causes the yaw. The formulas are obtained from Sytem Identification Crazyflie paper
+                    # source: https://doi.org/10.3929/ethz-b-000214143
+                    torque_yaw = 0.005964552 * force + 1.563383E-5 # torque in Newton meter (from Sytem Identification Crazyflie paper)
                     torques_yaw[idx] = np.array([0, 0, torques_yaw_direction[idx] * torque_yaw])
 
-                    # Add up all torques
+                    # Add up all torques en moments
                     total_torque = total_torque + torques_pitchroll[idx] + torques_yaw[idx]
 
-                # print(f"Torque: {total_torque}")  # debug
+                # Apply torque on the Crazyflie in Pybullet
                 p.applyExternalTorque(
                     objectUniqueId=objectUniqueId,
                     linkIndex=linkIndex[0],
@@ -417,11 +411,16 @@ class ForceController(EngineNode):
     @register.inputs(tick=UInt64, action=Float32MultiArray, orientation=Float32MultiArray, velocity=Float32MultiArray)
     @register.outputs(action_applied=Float32MultiArray, velocity_out=Float32MultiArray)
     def callback(self, t_n: float, tick: Msg, action: Msg, orientation: Msg, velocity: Msg):
-        """Produces a link sensor measurement called `obs`.
+        """ This node calculates the force and torque from the PWM signal per motor, the torque from the forces,
+        the drag force and the yaw torque and sends it to the physics engine.
 
-        The measurement is published at the specified rate * real_time_factor.
+        :param action: The PWM signal per motor.
+        :param orientation: The orientation in quaternions
+        :param velocity: The velocity in meter per second
 
-        Input `tick` ensures that this node is I/O synchronized with the simulator."""
+        :return: action_applied: The forces caused by the motors
+        :return: velocity_out: The inputted velocity in meter per second
+        """
         action_to_apply = action.msgs[-1]
         # action_applied.data = np.array([40000, 40000, 40000, 40000])  # debug
         total_force = self.force_cb(action_to_apply.data, velocity, orientation)
@@ -449,7 +448,7 @@ class AccelerometerSensor(EngineNode):
         :param links: List of links to be included in the measurements. Its order determines the ordering of the measurements.
         :param process: Process in which this node is launched. See :class:`~eagerx.core.constants.process` for all options.
         :param color: Specifies the color of logged messages & node color in the GUI.
-        :param mode: Available: `position`, `orientation`, `velocity`, and `angular_vel`
+
         :return: NodeSpec
         """
         # Performs all the steps to fill-in the params with registered info about all functions.
@@ -463,50 +462,48 @@ class AccelerometerSensor(EngineNode):
         spec.config.outputs = ["obs"]
 
     def initialize(self):
+        # Direction of the gravitational acceleration as measured by the accelerometer
         self.gravity = np.array([0, 0, 9.81])
 
     @register.states()
     def reset(self):
-        """This link sensor is stateless, so nothing happens here."""
         pass
 
     @register.inputs(tick=UInt64, input_velocity=Float32MultiArray, orientation=Float32MultiArray)
     @register.outputs(obs=Float32MultiArray)
     def callback(self, t_n: float, input_velocity: Msg, orientation: Msg, tick: Optional[Msg] = None):
-        """Produces a link sensor measurement called `obs`.
+        """ This node simulates an accelerometer.
+        It calculates the derivative of the velocity (the acceleration) and adds the gravitational acceleration as measured by the acceleration.
+        This means that the gravitational acceleration has to be aligned with the world frame upward direction.
 
-        The measurement is published at the specified rate * real_time_factor.
+        :param input_velocity: The velocity in meter per second
+        :param orientation: The orientation in quaternions from Pybullet
 
-        Input `tick` ensures that this node is I/O synchronized with the simulator."""
-        # get last and current velocity
+        :return obs: The accelerometer measurement in meter per second send to the StateEstimator node
+
+        """
         orientation_euler = pybullet.getEulerFromQuaternion(orientation.msgs[-1].data)
         roll = orientation_euler[0]
         pitch = -orientation_euler[1]
 
-        # roll, pitch, yaw = np.pi / 2, np.pi / 4, 0
         rotation_matrix = np.array([[np.cos(-pitch), 0, -np.sin(-pitch)],
                                     [-np.sin(-roll) * np.sin(-pitch), np.cos(-roll), -np.sin(-roll) * np.cos(-pitch)],
                                     [np.cos(-roll) * np.sin(-pitch), np.sin(-roll), np.cos(-roll) * np.cos(-pitch)]])
         gravity_vector = rotation_matrix.dot(self.gravity)
-        # print(gravity_vector)
 
+        # get last and current velocity
         last = np.array(input_velocity.msgs[0].data)
-        # print("last", last) # debug
         try:
             current = np.array(input_velocity.msgs[1].data)
         except:
             current = np.array([0, 0, 0])
-        # print("current", current) # debug
 
-        # calculate acceleration dy/dt
-
+        # calculate acceleration = dv/dt
         diff = (current - last) / (1 / self.rate)
+
+        # Add the acceleration and the gravitational acceleration to calculate the accelerometer measurement
         acceleration = diff + gravity_vector
 
-        # print(f"Gravity vector     = {np.round(gravity_vector, 4)}")
-        # print(f"Total acceleration = {np.round(acceleration, 4)}")
-        # print(f"Differentiated     = {np.round(diff, 4)}")
-        # print("=" * 50)
         return dict(obs=Float32MultiArray(data=acceleration))
 
 
@@ -548,30 +545,29 @@ class StateEstimator(eagerx.EngineNode):
                                                                                               dtype="float32")
 
     def initialize(self):
+        # initialize for Mahony's algorithm
         self.qw = 1.0
         self.qx = 0.0
         self.qy = 0.0
         self.qz = 0.0
 
-        # For overall rate = 240 Hz
-        self.twoKp = 2 * 0.4  # 2 * 0.4
-        self.twoKi = 2 * 0.00048  # 2 * 0.001
-        # self.twoKp = 2 * 0.1  # 2 * 0.4
-        # self.twoKi = 2 * 0.004  # 2 * 0.001
-
+        # For overall rate = 240 Hz (see paper on the Github for the calculations of the constants)
+        self.twoKp = 2 * 0.4
+        self.twoKi = 2 * 0.00048
         self.i = 0
 
         self.integralFBx = 0.0
         self.integralFBy = 0.0
         self.integralFBz = 0.0
 
-        # initialize for Madgwick quaternion calculations
+        # initialize for Madgwick algorithm
         self.qw2 = 1.0
         self.qx2 = 0.0
         self.qy2 = 0.0
         self.qz2 = 0.0
 
-        self.beta = 0.001  # [2 * proportional gain (Kp)] = 0.01
+        # Not tested
+        self.beta = 0.01  # [2 * proportional gain (Kp)] = 0.01
 
     @eagerx.register.states()
     def reset(self):
@@ -581,11 +577,22 @@ class StateEstimator(eagerx.EngineNode):
                             orientation=Float32MultiArray)
     @eagerx.register.outputs(orientation_state_estimator=Float32MultiArray, orientation_pybullet=Float32MultiArray)
     def callback(self, t_n: float, angular_velocity: Msg, acceleration: Msg, orientation: Msg):
+        """ This node implements the state estimator from the Crazyflie with two possible algorithms.
+        1. Madgwick's implementation of Mahony's AHRS algorithm (default and used here).
+        2. Implementation of Madgwick's IMU and AHRS algorithms.
+
+        :param angular_velocity: The angular velocity in radians per second
+        :param acceleration: The acceleration in meter per second (is normalised so unit doesn't really matter)
+        :param orientation: The orientation from Pybullet in quaternions
+
+        :return orientation_state_estimator: The orientation in euler angles calculated by the state estimator in degrees send to the AttitudePID node
+        :return orientation_pybullet: The orientation in euler angles from Pybullet in degrees send to environment observations
+        """
         angular_velocity = angular_velocity.msgs[-1].data
         acceleration = np.array(acceleration.msgs[-1].data)
 
-        # Crazyflie default state estimator
-        attitude_calculated = np.array(self.calculate_attitude(acceleration, angular_velocity))
+        # Crazyflie default state estimator (Mahony's algorithm implemented by Madgwick)
+        attitude_calculated = np.array(self.calculate_attitude_mahony(acceleration, angular_velocity))
         # Crazyflie Madgwick state estimator
         # attitude_calculated_madgwick = np.array(self.calculate_attitude_madgwick(acceleration, angular_velocity))
 
@@ -605,25 +612,23 @@ class StateEstimator(eagerx.EngineNode):
     def invert_pitch(attitude):
         return np.array([attitude[0], -attitude[1], attitude[2]])
 
-    def calculate_attitude(self, acceleration, angular_velocity):
-        # source: https://github.com/bitcraze/crazyflie-firmware/blob/2a282b575c2541d3f3b4552296952a6cc40bf5b5/src/modules/src/sensfusion6.c#L99-L253
+    def calculate_attitude_mahony(self, acceleration, angular_velocity):
+        """ Madgwick's implementation of Mahony's AHRS algorithm. The default state estimator in the Crazyflie
+        Source: https://github.com/bitcraze/crazyflie-firmware/blob/2a282b575c2541d3f3b4552296952a6cc40bf5b5/src/modules/src/sensfusion6.c#L183-L251
+
+        :param acceleration: The acceleration in meter per second (is normalised so unit doesn't really matter)
+        :param angular_velocity: The angular velocity in radians per second
+
+        :return [roll, pitch, yaw]: the estimated orientation in degrees
+        """
         dt = (1 / self.rate)
-        # Quaternion of sensor frame relative to auxiliary frame
 
         ax = acceleration[0]
         ay = acceleration[1]
         az = acceleration[2]
-        gx = angular_velocity[0]                # rad/s
-        gy = angular_velocity[1]                # rad/s
-        gz = angular_velocity[2]                # rad/s
-
-        # own reset function (not necessary)
-        # if self.i % 500 == 0:
-        #     # self.qw, self.qx, self.qy, self.qz  = 1.0, 0, 0, 0
-        #     self.integralFBx = 0.0  # prevent integral windup
-        #     self.integralFBy = 0.0
-        #     self.integralFBz = 0.0
-        # self.i += 1
+        gx = angular_velocity[0]  # rad/s
+        gy = angular_velocity[1]  # rad/s
+        gz = angular_velocity[2]  # rad/s
 
         if not ((ax == 0.0) and (ay == 0.0) and (az == 0.0)):
             recipNorm = 1 / np.sqrt(np.sum(acceleration ** 2))  # normalize acceleration
@@ -682,7 +687,7 @@ class StateEstimator(eagerx.EngineNode):
         gravX = 2 * (self.qx * self.qz - self.qw * self.qy)
         gravY = 2 * (self.qw * self.qx + self.qy * self.qz)
         gravZ = self.qw ** 2 - self.qx ** 2 - self.qy ** 2 + self.qz ** 2
-        # print(f"The direction of the gravitational vector   = {np.array([gravX, gravY, gravZ])}")
+
         if gravX > 1:
             gravX = 1
         elif gravX < -1:
@@ -695,20 +700,23 @@ class StateEstimator(eagerx.EngineNode):
         pitch = np.arcsin(gravX) * 180 / np.pi  # here is the pitch inverted
         roll = np.arctan(gravY / gravZ) * 180 / np.pi
 
-        # print(f"estimated direction of gravity = {np.round(np.array([gravX, gravY, gravZ]), 4)}")
-        # print(f"Crazyflie default [qx, qy, qz, qw]        = {[self.qx, self.qy, self.qz, self.qw]}")
-        # roll, pitch, yaw = pybullet.getEulerFromQuaternion(np.array([self.qx, self.qy, self.qz, self.qw]))
-        # print("attitude from pybullet quaternion to euler = ", self.invert_pitch(np.round(np.array([roll, pitch, yaw]) * 180 / np.pi, 3)))
-
         return np.array([roll, pitch, yaw])
 
     def calculate_attitude_madgwick(self, acceleration, angular_velocity):
+        """ Implementation of Madgwick's IMU and AHRS algorithms.
+        Source: https://github.com/bitcraze/crazyflie-firmware/blob/2a282b575c2541d3f3b4552296952a6cc40bf5b5/src/modules/src/sensfusion6.c#L108-L172
+
+        :param acceleration: The acceleration in meter per second (is normalised so unit doesn't really matter)
+        :param angular_velocity: The angular velocity in radians per second
+
+        :return [roll, pitch, yaw]: the estimated orientation in degrees
+        """
         ax = acceleration[0]
         ay = acceleration[1]
         az = acceleration[2]
-        gx = angular_velocity[0]        # rad/s
-        gy = angular_velocity[1]        # rad/s
-        gz = angular_velocity[2]        # rad/s
+        gx = angular_velocity[0]  # rad/s
+        gy = angular_velocity[1]  # rad/s
+        gz = angular_velocity[2]  # rad/s
         dt = (1 / self.rate)
 
         qDot1 = 0.5 * (-self.qx2 * gx - self.qy2 * gy - self.qz2 * gz)
@@ -782,300 +790,4 @@ class StateEstimator(eagerx.EngineNode):
         pitch = np.arcsin(gravX) * 180 / np.pi  # here is the pitch inverted
         roll = np.arctan(gravY / gravZ) * 180 / np.pi
 
-        # print(f"Crazyflie Madgwick [qx, qy, qz, qw]       = {[self.qx2, self.qy2, self.qz2, self.qw2]}")
-        # roll, pitch, yaw = pybullet.getEulerFromQuaternion(np.array([self.qx2, self.qy2, self.qz2, self.qw2]))
-        # print("attitude from pybullet quaternion to euler = ", self.invert_pitch(np.round(np.array([roll, pitch, yaw]) * 180 / np.pi, 3)))
-
         return np.array([roll, pitch, yaw])
-
-# class LinkSensor(EngineNode):
-#     @staticmethod
-#     @register.spec("LinkSensor", EngineNode)
-#     def spec(
-#         spec: NodeSpec,
-#         name: str,
-#         rate: float,
-#         links: List[str] = None,
-#         process: Optional[int] = p.ENGINE,
-#         color: Optional[str] = "cyan",
-#         mode: str = "position",
-#     ):
-#         """A spec to create a LinkSensor node that provides sensor measurements for the specified set of links.
-#
-#         :param spec: Holds the desired configuration.
-#         :param name: User specified node name.
-#         :param rate: Rate (Hz) at which the callback is called.
-#         :param links: List of links to be included in the measurements. Its order determines the ordering of the measurements.
-#         :param process: Process in which this node is launched. See :class:`~eagerx.core.constants.process` for all options.
-#         :param color: Specifies the color of logged messages & node color in the GUI.
-#         :param mode: Available: `position`, `orientation`, `velocity`, and `angular_vel`
-#         :return: NodeSpec
-#         """
-#         # Performs all the steps to fill-in the params with registered info about all functions.
-#         spec.initialize(LinkSensor)
-#
-#         # Modify default node params
-#         spec.config.name = name
-#         spec.config.rate = rate
-#         spec.config.process = process
-#         spec.config.inputs = ["tick"]
-#         spec.config.outputs = ["obs"]
-#
-#         # Set parameters, defined by the signature of cls.initialize(...)
-#         spec.config.links = links if isinstance(links, list) else []
-#         spec.config.mode = mode
-#
-#     def initialize(self, links, mode):
-#         """Initializes the link sensor node according to the spec."""
-#         self.obj_name = self.config["name"]
-#         assert self.process == p.ENGINE, (
-#             "Simulation node requires a reference to the simulator," " hence it must be launched in the engine process"
-#         )
-#         flag = self.obj_name in self.simulator["robots"]
-#         assert flag, f'Simulator object "{self.simulator}" is not compatible with this simulation node.'
-#         self.robot = self.simulator["robots"][self.obj_name]
-#         # If no links are provided, take baselink
-#         if len(links) == 0:
-#             for pb_name, part in self.robot.parts.items():
-#                 bodyid, linkindex = part.get_bodyid_linkindex()
-#                 if linkindex == -1:
-#                     links.append(pb_name)
-#         self.links = links
-#         self.mode = mode
-#         self._p = self.simulator["client"]
-#         self.physics_client_id = self._p._client
-#         self.link_cb = self._link_measurement(self._p, self.mode, self.robot, links)
-#
-#     @register.states()
-#     def reset(self):
-#         """This link sensor is stateless, so nothing happens here."""
-#         pass
-#
-#     @register.inputs(tick=UInt64)
-#     @register.outputs(obs=Float32MultiArray)
-#     def callback(self, t_n: float, tick: Optional[Msg] = None):
-#         """Produces a link sensor measurement called `obs`.
-#
-#         The measurement is published at the specified rate * real_time_factor.
-#
-#         Input `tick` ensures that this node is I/O synchronized with the simulator."""
-#         obs = self.link_cb()
-#         return dict(obs=Float32MultiArray(data=obs))
-#
-#     @staticmethod
-#     def _link_measurement(p, mode, robot, links):
-#         if mode == "position":  # (x, y, z)
-#
-#             def cb():
-#                 obs = []
-#                 for pb_name in links:
-#                     obs += robot.parts[pb_name].get_position().tolist()
-#                 return obs
-#
-#         elif mode == "orientation":  # (x, y, z, w)
-#
-#             def cb():
-#                 obs = []
-#                 for pb_name in links:
-#                     obs += robot.parts[pb_name].get_orientation().tolist()
-#                 return obs
-#
-#         elif mode == "velocity":  # (vx, vy, vz)
-#
-#             def cb():
-#                 obs = []
-#                 for pb_name in links:
-#                     vel, _ = robot.parts[pb_name].speed()
-#                     obs += vel.tolist()
-#                 return obs
-#
-#         elif mode == "angular_vel":  # (vx, vy, vz)
-#
-#             def cb():
-#                 obs = []
-#                 for pb_name in links:
-#                     _, rate = robot.parts[pb_name].speed()
-#                     obs += rate.tolist()
-#                 return obs
-#
-#         else:
-#             raise ValueError(f"Mode '{mode}' not recognized.")
-#         return cb
-
-
-# class JointController(EngineNode):
-#     @staticmethod
-#     @register.spec("JointController", EngineNode)
-#     def spec(
-#         spec: NodeSpec,
-#         name: str,
-#         rate: float,
-#         joints: List[str],
-#         process: Optional[int] = p.ENGINE,
-#         color: Optional[str] = "green",
-#         mode: str = "position_control",
-#         vel_target: List[float] = None,
-#         pos_gain: List[float] = None,
-#         vel_gain: List[float] = None,
-#         max_force: List[float] = None,
-#     ):
-#         """A spec to create a JointController node that controls a set of joints.
-#
-#         For more info on `vel_target`, `pos_gain`, and `vel_gain`, see `setJointMotorControlMultiDofArray` in
-#         https://docs.google.com/document/d/10sXEhzFRSnvFcl3XxNGhnD4N2SedqwdAvK3dsihxVUA/edit#
-#
-#         :param spec: Holds the desired configuration in a Spec object.
-#         :param name: User specified node name.
-#         :param rate: Rate (Hz) at which the callback is called.
-#         :param joints: List of controlled joints. Its order determines the ordering of the applied commands.
-#         :param process: Process in which this node is launched. See :class:`~eagerx.core.constants.process` for all options.
-#         :param color: Specifies the color of logged messages & node color in the GUI.
-#         :param mode: Available: `position_control`, `velocity_control`, `pd_control`, and `torque_control`.
-#         :param vel_target: The desired velocity. Ordering according to `joints`.
-#         :param pos_gain: Position gain. Ordering according to `joints`.
-#         :param vel_gain: Velocity gain. Ordering according to `joints`.
-#         :param max_force: Maximum force when mode in [`position_control`, `velocity_control`, `pd_control`]. Ordering
-#                           according to `joints`.
-#         :return: NodeSpec
-#         """
-#         # Performs all the steps to fill-in the params with registered info about all functions.
-#         spec.initialize(JointController)
-#
-#         # Modify default node params
-#         spec.config.name = name
-#         spec.config.rate = rate
-#         spec.config.process = process
-#         spec.config.inputs = ["tick", "action"]
-#         spec.config.outputs = ["action_applied"]
-#
-#         # Set parameters, defined by the signature of cls.initialize(...)
-#         spec.config.joints = joints
-#         spec.config.mode = mode
-#         spec.config.vel_target = vel_target if vel_target else [0.0] * len(joints)
-#         spec.config.pos_gain = pos_gain if pos_gain else [0.2] * len(joints)
-#         spec.config.vel_gain = vel_gain if vel_gain else [0.2] * len(joints)
-#         spec.config.max_force = max_force if max_force else [999.0] * len(joints)
-#
-#     def initialize(self, joints, mode, vel_target, pos_gain, vel_gain, max_force):
-#         """Initializes the joint controller node according to the spec."""
-#         # We will probably use self.simulator[self.obj_name] in callback & reset.
-#         self.obj_name = self.config["name"]
-#         assert self.process == p.ENGINE, (
-#             "Simulation node requires a reference to the simulator," " hence it must be launched in the Engine process"
-#         )
-#         flag = self.obj_name in self.simulator["robots"]
-#         assert flag, f'Simulator object "{self.simulator}" is not compatible with this simulation node.'
-#         self.joints = joints
-#         self.mode = mode
-#         self.vel_target = vel_target
-#         self.pos_gain = pos_gain
-#         self.vel_gain = vel_gain
-#         self.max_force = max_force
-#         self.robot = self.simulator["robots"][self.obj_name]
-#         self._p = self.simulator["client"]
-#         self.physics_client_id = self._p._client
-#
-#         self.bodyUniqueId = []
-#         self.jointIndices = []
-#         for _idx, pb_name in enumerate(joints):
-#             bodyid, jointindex = self.robot.jdict[pb_name].get_bodyid_jointindex()
-#             self.bodyUniqueId.append(bodyid), self.jointIndices.append(jointindex)
-#
-#         self.joint_cb = self._joint_control(
-#             self._p,
-#             self.mode,
-#             self.bodyUniqueId[0],
-#             self.jointIndices,
-#             self.pos_gain,
-#             self.vel_gain,
-#             self.vel_target,
-#             self.max_force,
-#         )
-#
-#     @register.states()
-#     def reset(self):
-#         """This joint controller is stateless, so nothing happens here."""
-#         pass
-#
-#     @register.inputs(tick=UInt64, action=Float32MultiArray)
-#     @register.outputs(action_applied=Float32MultiArray)
-#     def callback(
-#         self,
-#         t_n: float,
-#         tick: Optional[Msg] = None,
-#         action: Optional[Msg] = None,
-#     ):
-#         """Sets the most recently received `action` in the pybullet joint controller.
-#
-#         The action is set at the specified rate * real_time_factor.
-#
-#         The output `action_applied` is the action that was set. If the input `action` comes in at a higher rate than
-#         this node's rate, `action_applied` may be differnt as only the most recently received `action` is set.
-#
-#         Input `tick` ensures that this node is I/O synchronized with the simulator."""
-#         # Set action in pybullet
-#         self.joint_cb(action.msgs[-1].data)
-#         # Send action that has been applied.
-#         return dict(action_applied=action.msgs[-1])
-#
-#     @staticmethod
-#     def _joint_control(p, mode, bodyUniqueId, jointIndices, pos_gain, vel_gain, vel_target, max_force):
-#         if mode == "position_control":
-#
-#             def cb(action):
-#                 return p.setJointMotorControlArray(
-#                     bodyUniqueId=bodyUniqueId,
-#                     jointIndices=jointIndices,
-#                     controlMode=pybullet.POSITION_CONTROL,
-#                     targetPositions=action,
-#                     targetVelocities=vel_target,
-#                     positionGains=pos_gain,
-#                     velocityGains=vel_gain,
-#                     forces=max_force,
-#                     physicsClientId=p._client,
-#                 )
-#
-#         elif mode == "velocity_control":
-#
-#             def cb(action):
-#                 return p.setJointMotorControlArray(
-#                     bodyUniqueId=bodyUniqueId,
-#                     jointIndices=jointIndices,
-#                     controlMode=pybullet.VELOCITY_CONTROL,
-#                     targetVelocities=action,
-#                     positionGains=pos_gain,
-#                     velocityGains=vel_gain,
-#                     forces=max_force,
-#                     physicsClientId=p._client,
-#                 )
-#
-#         elif mode == "pd_control":
-#
-#             def cb(action):
-#                 return p.setJointMotorControlArray(
-#                     bodyUniqueId=bodyUniqueId,
-#                     jointIndices=jointIndices,
-#                     controlMode=pybullet.PD_CONTROL,
-#                     targetVelocities=action,
-#                     positionGains=pos_gain,
-#                     velocityGains=vel_gain,
-#                     forces=max_force,
-#                     physicsClientId=p._client,
-#                 )
-#
-#         elif mode == "torque_control":
-#
-#             def cb(action):
-#                 return p.setJointMotorControlArray(
-#                     bodyUniqueId=bodyUniqueId,
-#                     jointIndices=jointIndices,
-#                     controlMode=pybullet.TORQUE_CONTROL,
-#                     forces=action,
-#                     positionGains=pos_gain,
-#                     velocityGains=vel_gain,
-#                     physicsClientId=p._client,
-#                 )
-#
-#         else:
-#             raise ValueError(f"Mode '{mode}' not recognized.")
-#         return cb
