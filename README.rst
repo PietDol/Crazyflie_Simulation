@@ -76,7 +76,7 @@ If you are using Crazyflie Simulation for your scientific publications, please c
 
 More information
 ===================
-More information can be found in our `paper <https://github.com/eager-dev/eagerx>`_.
+More information can be found in our `paper <docs/Dynamic_Quadcopter_Simulation_Framework.pdf>`_.
 
 Bibliography
 ===================
