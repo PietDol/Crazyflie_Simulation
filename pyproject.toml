@@ -21,7 +21,7 @@ stable-baselines3 = {extras = ["extra"], version = "^1.5.0"}
 eagerx-ode = "^0.1.11"
 
 [tool.poetry.dev-dependencies]
-black = "^22.3.0"
+black = "^22.10.0"
 pytest = "^7.0"
 pytest-cov = "^3.0.0"
 flake8 = ">=3"
